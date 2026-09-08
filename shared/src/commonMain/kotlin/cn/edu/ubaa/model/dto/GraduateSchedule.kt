@@ -29,20 +29,26 @@ private constructor(
     private val courses: List<JsonObject>,
     private val dates: List<JsonObject>,
     private val sectionTimes: List<SectionTime>,
+    private val availableTerms: List<Term>? = null,
+    private val semesterStart: LocalDate? = null,
 ) {
+  internal fun withCalendar(terms: List<Term>, start: LocalDate?) =
+      GraduateSchedule(rows, courses, dates, sectionTimes, terms, start)
+
   fun terms(): List<Term> =
-      (courses + rows)
-          .map { it.text("XNXQDM") }
-          .distinct()
-          .sortedDescending()
-          .mapIndexed { i, code ->
-            Term(
-                code,
-                courses.firstOrNull { it.text("XNXQDM") == code }?.optional("XNXQMC") ?: code,
-                i == 0,
-                i,
-            )
-          }
+      availableTerms
+          ?: (courses + rows)
+              .map { it.text("XNXQDM") }
+              .distinct()
+              .sortedDescending()
+              .mapIndexed { i, code ->
+                Term(
+                    code,
+                    courses.firstOrNull { it.text("XNXQDM") == code }?.optional("XNXQMC") ?: code,
+                    i == 0,
+                    i,
+                )
+              }
 
   fun weekly(termCode: String, week: Int): WeeklySchedule {
     val term = terms().firstOrNull { it.itemCode == termCode } ?: error("研究生课表中没有所选学期，请刷新学期列表")
@@ -108,7 +114,7 @@ private constructor(
   fun weeks(termCode: String, today: LocalDate): List<Week> {
     val termRows = rows.filter { it.text("XNXQDM") == termCode }
     if (termRows.isEmpty()) return emptyList()
-    val start = firstMonday(termRows)
+    val start = semesterStart ?: firstMonday(termRows)
     // ponytail: 位图给出可查询周次范围，不能把位图长度当成学校公布的学期长度。
     return (1..termRows.maxOf { it.text("ZCBH").length }).map { week ->
       val from = LocalDate.fromEpochDays(start.toEpochDays() + 7 * (week - 1))

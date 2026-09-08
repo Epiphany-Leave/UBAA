@@ -10,6 +10,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 
 class GraduateScheduleUpstreamTest {
+  private val termsBody =
+      """{"code":"0","datas":{"kfdxnxqcx":{"totalSize":1,"rows":[{"XNXQDM":"20261","XNXQDM_DISPLAY":"2026秋"}]}}}"""
+
   @Test
   fun authenticatesThroughOfficialEntryBeforeLoadingCourses() = runTest {
     val paths = mutableListOf<String>()
@@ -20,16 +23,26 @@ class GraduateScheduleUpstreamTest {
               if (paths.size == 1) {
                 assertTrue(request.url.encodedPath.endsWith("/*default/index.do"))
                 respond("<html>已登录</html>")
+              } else if (paths.size == 2) {
+                assertTrue(request.url.encodedPath.endsWith("/kfdxnxqcx.do"))
+                assertEquals(io.ktor.http.HttpMethod.Post, request.method)
+                respond(termsBody)
               } else {
-                assertTrue(request.url.encodedPath.endsWith("/xsxkCourse/loadKbxx.do"))
-                assertEquals("0", request.url.parameters["sfyx"])
-                respond("""{"results":[],"xkjgList":[],"rqpkjgallList":[]}""")
+                assertTrue(request.url.encodedPath.endsWith("/bykb/loadXskbData.do"))
+                assertEquals(io.ktor.http.HttpMethod.Post, request.method)
+                assertEquals(
+                    "ZC=&XNXQDM=20261&XH=&XQDM=",
+                    (request.body as io.ktor.client.request.forms.FormDataContent)
+                        .bytes()
+                        .decodeToString(),
+                )
+                respond("""{"code":1,"jgList":[],"rwList":[],"jcfaList":[]}""")
               }
             }
         )
     try {
-      assertTrue(fetchGraduateSchedule(client) { it }.terms().isEmpty())
-      assertEquals(2, paths.size)
+      assertEquals("20261", fetchGraduateSchedule(client, { it }).terms().single().itemCode)
+      assertEquals(3, paths.size)
     } finally {
       client.close()
     }
@@ -42,7 +55,7 @@ class GraduateScheduleUpstreamTest {
     try {
       val error =
           assertFailsWith<GraduateScheduleAuthenticationException> {
-            fetchGraduateSchedule(client) { it }
+            fetchGraduateSchedule(client, { it })
           }
       assertTrue(error.message!!.contains("研究生登录"))
       assertFalse(error.message!!.contains("private-token"))
@@ -56,14 +69,15 @@ class GraduateScheduleUpstreamTest {
     val client =
         HttpClient(
             MockEngine { request ->
-              if (request.url.encodedPath.endsWith("/loadKbxx.do"))
+              if (request.url.encodedPath.endsWith("/loadXskbData.do"))
                   respond("private-token", HttpStatusCode.ServiceUnavailable)
+              else if (request.url.encodedPath.endsWith("/kfdxnxqcx.do")) respond(termsBody)
               else respond("<html>已登录</html>")
             }
         )
     try {
       val error =
-          assertFailsWith<GraduateScheduleLoadException> { fetchGraduateSchedule(client) { it } }
+          assertFailsWith<GraduateScheduleLoadException> { fetchGraduateSchedule(client, { it }) }
       assertTrue(error.message!!.contains("研究生课表请求：HTTP 503"))
       assertFalse(error.message!!.contains("private-token"))
     } finally {
@@ -77,14 +91,15 @@ class GraduateScheduleUpstreamTest {
         HttpClient(
             MockEngine { request ->
               respond(
-                  if (request.url.encodedPath.endsWith("/loadKbxx.do")) "{private-token"
+                  if (request.url.encodedPath.endsWith("/loadXskbData.do")) "{private-token"
+                  else if (request.url.encodedPath.endsWith("/kfdxnxqcx.do")) termsBody
                   else "<html>已登录</html>"
               )
             }
         )
     try {
       val error =
-          assertFailsWith<GraduateScheduleLoadException> { fetchGraduateSchedule(client) { it } }
+          assertFailsWith<GraduateScheduleLoadException> { fetchGraduateSchedule(client, { it }) }
       assertTrue(error.message!!.startsWith("研究生课表解析："))
       assertTrue(error.message!!.contains("字符数=14"))
       assertTrue(error.message!!.contains("位置="))
@@ -119,7 +134,7 @@ class GraduateScheduleUpstreamTest {
   fun propagatesCancellation() = runTest {
     val client = HttpClient(MockEngine { throw CancellationException("cancelled") })
     try {
-      assertFailsWith<CancellationException> { fetchGraduateSchedule(client) { it } }
+      assertFailsWith<CancellationException> { fetchGraduateSchedule(client, { it }) }
     } finally {
       client.close()
     }

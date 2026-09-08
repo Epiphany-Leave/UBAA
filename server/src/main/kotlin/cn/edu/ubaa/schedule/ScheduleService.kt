@@ -67,7 +67,7 @@ class ScheduleService(
   /** 获取指定学期的周次划分。 */
   suspend fun fetchWeeks(username: String, termCode: String): List<Week> {
     val session = sessionManager.requireSession(username)
-    session.graduateScheduleIfNeeded(username)?.let {
+    session.graduateScheduleIfNeeded(username, termCode)?.let {
       return it.weeks(termCode, graduateToday())
     }
     val response = session.getWeeks(termCode)
@@ -91,7 +91,7 @@ class ScheduleService(
   /** 获取周课表详情。 */
   suspend fun fetchWeeklySchedule(username: String, termCode: String, week: Int): WeeklySchedule {
     val session = sessionManager.requireSession(username)
-    session.graduateScheduleIfNeeded(username)?.let {
+    session.graduateScheduleIfNeeded(username, termCode)?.let {
       return it.weekly(termCode, week)
     }
     val response = session.getWeeklySchedule(termCode, week)
@@ -144,6 +144,7 @@ class ScheduleService(
 
   private suspend fun SessionManager.UserSession.graduateScheduleIfNeeded(
       username: String,
+      termCode: String? = null,
   ): GraduateSchedule? {
     try {
       ensureUndergradPortalAccess(
@@ -155,8 +156,8 @@ class ScheduleService(
       )
     } catch (_: UnsupportedAcademicPortalException) {
       try {
-        return AppObservability.observeUpstreamRequest("yjsxk", "get_schedule") {
-          fetchGraduateSchedule(client, VpnCipher::toVpnUrl)
+        return AppObservability.observeUpstreamRequest("gsmis", "get_schedule") {
+          fetchGraduateSchedule(client, VpnCipher::toVpnUrl, termCode)
         }
       } catch (_: GraduateScheduleAuthenticationException) {
         throw LoginException("Graduate course selection session expired")

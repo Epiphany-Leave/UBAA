@@ -1,8 +1,11 @@
 package cn.edu.ubaa.api.feature
 
 import cn.edu.ubaa.model.dto.GraduateSchedule
+import cn.edu.ubaa.model.dto.parseGsmisSchedule
+import cn.edu.ubaa.model.dto.parseGsmisTerms
 import io.ktor.client.HttpClient
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
@@ -20,20 +23,41 @@ class GraduateScheduleAuthenticationException(stage: String, status: Int) :
 suspend fun fetchGraduateSchedule(
     client: HttpClient,
     upstreamUrl: (String) -> String,
+    termCode: String? = null,
 ): GraduateSchedule {
-  val base = "https://yjsxk.buaa.edu.cn/yjsxkapp/sys/xsxkappbuaa"
-  // 官方 index.html 的“点击进入登录”入口。course.html 是公开静态页，不建立 SSO 会话。
+  val base = "https://gsmis.buaa.edu.cn/gsapp/sys/wdkbapp"
   graduateStage("研究生登录") {
     checkGraduateResponse(client.get(upstreamUrl("$base/*default/index.do")), "研究生登录", upstreamUrl)
   }
+  val terms =
+      graduateStage("GSMIS 学期列表") {
+        val response =
+            client.post(upstreamUrl("$base/modules/xskcb/kfdxnxqcx.do")) {
+              header(HttpHeaders.Accept, "application/json, text/javascript, */*; q=0.01")
+              header("X-Requested-With", "XMLHttpRequest")
+              header(HttpHeaders.Referrer, upstreamUrl("$base/*default/index.do"))
+            }
+        parseGsmisTerms(checkGraduateResponse(response, "GSMIS 学期列表", upstreamUrl))
+      }
+  val selectedTerm = termCode ?: terms.firstOrNull()?.itemCode
+  require(selectedTerm != null && terms.any { it.itemCode == selectedTerm }) { "GSMIS 未返回所选学期" }
   val body =
       graduateStage("研究生课表请求") {
         val response =
-            client.get(upstreamUrl("$base/xsxkCourse/loadKbxx.do")) {
-              parameter("sfyx", "0")
+            client.post(upstreamUrl("$base/bykb/loadXskbData.do")) {
+              setBody(
+                  FormDataContent(
+                      Parameters.build {
+                        append("ZC", "")
+                        append("XNXQDM", selectedTerm)
+                        append("XH", "")
+                        append("XQDM", "")
+                      }
+                  )
+              )
               header(HttpHeaders.Accept, "application/json, text/javascript, */*; q=0.01")
               header("X-Requested-With", "XMLHttpRequest")
-              header(HttpHeaders.Referrer, upstreamUrl("$base/course.html"))
+              header(HttpHeaders.Referrer, upstreamUrl("$base/*default/index.do"))
             }
         checkGraduateResponse(response, "研究生课表请求", upstreamUrl).also {
           if (!it.trimStart().startsWith("{")) {
@@ -45,10 +69,15 @@ suspend fun fetchGraduateSchedule(
       }
   return graduateStage("研究生课表解析") {
     try {
-      GraduateSchedule.parse(body)
+      parseGsmisSchedule(body, terms, selectedTerm)
     } catch (e: SerializationException) {
       throw GraduateScheduleLoadException(
           "研究生课表解析：${jsonFailureDiagnostic(body, e)}",
+          responseBody = body,
+      )
+    } catch (e: Exception) {
+      throw GraduateScheduleLoadException(
+          "GSMIS 课表字段或校历校验失败：${e::class.simpleName}",
           responseBody = body,
       )
     }

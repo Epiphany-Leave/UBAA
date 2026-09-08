@@ -66,54 +66,55 @@ class LocalScheduleApiBackendTest {
   }
 
   @Test
-  fun `graduate schedule uses selection system when undergraduate portal requires login`() =
-      runTest {
-        for (mode in listOf(ConnectionMode.DIRECT, ConnectionMode.WEBVPN)) {
-          ConnectionModeStore.save(mode)
-          ConnectionRuntime.resolveSelectedMode()
-          LocalUpstreamClientProvider.reset()
-          val requests = mutableListOf<String>()
-          LocalUpstreamClientProvider.clientFactory = {
-            HttpClient(
-                MockEngine { request ->
-                  requests.add(request.url.toString())
-                  val content =
-                      when {
-                        request.url.encodedPath.endsWith("/currentUser.do") -> "<html>统一身份认证</html>"
-                        request.url.encodedPath.endsWith("/getUserInfo.do") ->
-                            error("研究生课表不能以 GSMIS 探测为前提")
-                        request.url.encodedPath.endsWith("/xsxkCourse/loadKbxx.do") -> {
-                          assertEquals("0", request.url.parameters["sfyx"])
-                          assertEquals(HttpMethod.Get, request.method)
-                          """{"results":[],"xkjgList":[{"SFYXXKJG":0,"BJDM":"example","XNXQDM":"20261","XNXQMC":"示例学期"}],"rqpkjgallList":[]}"""
-                        }
-                        else -> ""
-                      }
-                  respond(
-                      content,
-                      HttpStatusCode.OK,
-                      headersOf(HttpHeaders.ContentType, "application/json"),
-                  )
-                }
-            )
-          }
-          // 每种连接模式拥有自己的会话存储。
-          LocalAuthSessionStore.save(
-              LocalAuthSession(
-                  username = "test-graduate",
-                  user = UserData("Test", "test-graduate"),
-                  authenticatedAt = "2026-09-07T00:00:00Z",
-                  lastActivity = "2026-09-07T00:00:00Z",
+  fun `graduate schedule uses GSMIS when undergraduate portal requires login`() = runTest {
+    for (mode in listOf(ConnectionMode.DIRECT, ConnectionMode.WEBVPN)) {
+      ConnectionModeStore.save(mode)
+      ConnectionRuntime.resolveSelectedMode()
+      LocalUpstreamClientProvider.reset()
+      val requests = mutableListOf<String>()
+      LocalUpstreamClientProvider.clientFactory = {
+        HttpClient(
+            MockEngine { request ->
+              requests.add(request.url.toString())
+              val content =
+                  when {
+                    request.url.encodedPath.endsWith("/currentUser.do") -> "<html>统一身份认证</html>"
+                    request.url.encodedPath.endsWith("/getUserInfo.do") ->
+                        error("研究生课表不能以 GSMIS 探测为前提")
+                    request.url.encodedPath.endsWith("/kfdxnxqcx.do") ->
+                        """{"code":"0","datas":{"kfdxnxqcx":{"totalSize":1,"rows":[{"XNXQDM":"20261","XNXQDM_DISPLAY":"示例学期"}]}}}"""
+                    request.url.encodedPath.endsWith("/bykb/loadXskbData.do") -> {
+
+                      assertEquals(HttpMethod.Post, request.method)
+                      """{"code":1,"jgList":[],"rwList":[],"jcfaList":[]}"""
+                    }
+                    else -> ""
+                  }
+              respond(
+                  content,
+                  HttpStatusCode.OK,
+                  headersOf(HttpHeaders.ContentType, "application/json"),
               )
-          )
-          val imported = ScheduleApi().importSemester().getOrThrow()
-          assertEquals("20261", imported.termCode)
-          assertEquals(1, requests.count { it.contains("/xsxkCourse/loadKbxx.do") })
-          assertTrue(requests.any { it.contains("/xsxkCourse/loadKbxx.do") })
-          if (mode == ConnectionMode.WEBVPN)
-              assertTrue(requests.all { it.startsWith("https://d.buaa.edu.cn/") })
-        }
+            }
+        )
       }
+      // 每种连接模式拥有自己的会话存储。
+      LocalAuthSessionStore.save(
+          LocalAuthSession(
+              username = "test-graduate",
+              user = UserData("Test", "test-graduate"),
+              authenticatedAt = "2026-09-07T00:00:00Z",
+              lastActivity = "2026-09-07T00:00:00Z",
+          )
+      )
+      val imported = ScheduleApi().importSemester().getOrThrow()
+      assertEquals("20261", imported.termCode)
+      assertEquals(1, requests.count { it.contains("/bykb/loadXskbData.do") })
+      assertTrue(requests.any { it.contains("/bykb/loadXskbData.do") })
+      if (mode == ConnectionMode.WEBVPN)
+          assertTrue(requests.all { it.startsWith("https://d.buaa.edu.cn/") })
+    }
+  }
 
   @Test
   fun `undergraduate JSON error falls back to graduate source and remembers it for this login`() =
@@ -128,8 +129,10 @@ class LocalScheduleApiBackendTest {
                       request.url.encodedPath.endsWith("/currentUser.do") -> """{"code":"1"}"""
                       request.url.encodedPath.endsWith("/schoolCalendars.do") ->
                           """{"datas":[],"code":"1","msg":"unsupported"}"""
-                      request.url.encodedPath.endsWith("/loadKbxx.do") ->
-                          """{"results":[],"xkjgList":[{"SFYXXKJG":0,"BJDM":"example","XNXQDM":"20261"}],"rqpkjgallList":[]}"""
+                      request.url.encodedPath.endsWith("/kfdxnxqcx.do") ->
+                          """{"code":"0","datas":{"kfdxnxqcx":{"totalSize":1,"rows":[{"XNXQDM":"20261","XNXQDM_DISPLAY":"示例学期"}]}}}"""
+                      request.url.encodedPath.endsWith("/loadXskbData.do") ->
+                          """{"code":1,"jgList":[],"rwList":[],"jcfaList":[]}"""
                       request.url.encodedPath.endsWith("/*default/index.do") -> "<html>已登录</html>"
                       else -> error("Unexpected request")
                     }
@@ -141,7 +144,7 @@ class LocalScheduleApiBackendTest {
         assertEquals("20261", api.getTerms().getOrThrow().single().itemCode)
         requests.clear()
         assertTrue(api.getWeeks("20261").getOrThrow().isEmpty())
-        assertEquals(2, requests.size)
+        assertEquals(3, requests.size)
         assertTrue(requests.none { it.contains("/homeapp/") })
       }
 

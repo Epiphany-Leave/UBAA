@@ -43,7 +43,7 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
   override suspend fun importSemester(termCode: String?): Result<SemesterSchedule> =
       withScheduleAccess(
           graduate = {
-            val data = graduateSchedule()
+            val data = graduateSchedule(termCode)
             val terms = data.terms()
             val term =
                 if (termCode == null) terms.firstOrNull { it.selected } ?: terms.firstOrNull()
@@ -82,7 +82,9 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
 
   override suspend fun getWeeks(termCode: String): Result<List<Week>> =
       withScheduleAccess(
-          graduate = { Result.success(graduateSchedule().weeks(termCode, graduateToday())) },
+          graduate = {
+            Result.success(graduateSchedule(termCode).weeks(termCode, graduateToday()))
+          },
       ) {
         val response =
             LocalUpstreamClientProvider.shared().get(
@@ -98,7 +100,7 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
 
   override suspend fun getWeeklySchedule(termCode: String, week: Int): Result<WeeklySchedule> =
       withScheduleAccess(
-          graduate = { Result.success(graduateSchedule().weekly(termCode, week)) },
+          graduate = { Result.success(graduateSchedule(termCode).weekly(termCode, week)) },
       ) {
         val response =
             LocalUpstreamClientProvider.shared().post(
@@ -156,8 +158,8 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
         parseExamArrangement(response)
       }
 
-  private suspend fun graduateSchedule(): GraduateSchedule =
-      fetchGraduateSchedule(LocalUpstreamClientProvider.shared(), ::localUpstreamUrl)
+  private suspend fun graduateSchedule(termCode: String? = null): GraduateSchedule =
+      fetchGraduateSchedule(LocalUpstreamClientProvider.shared(), ::localUpstreamUrl, termCode)
 
   private suspend fun <T> withScheduleAccess(
       graduate: suspend () -> Result<T>,
@@ -179,7 +181,7 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
           }
       if (undergraduate?.isSuccess == true) return undergraduate
     }
-    // 本科门户或 GSMIS 探测失败不代表 YJSXK 课表不可用，直接验证真正的数据源。
+    // 本科门户或 GSMIS 探测失败不代表 GSMIS 我的课表不可用，直接验证真正的数据源。
     return try {
       graduate().also { if (it.isSuccess) graduateSession = key }
     } catch (e: CancellationException) {
@@ -267,7 +269,7 @@ internal class LocalScheduleApiBackend : ScheduleApiBackend {
       val body = response.bodyAsText()
       if (isLocalByxtSessionExpired(response, body)) {
         if (code == "schedule_error") {
-          // 还要尝试 YJSXK，不能因本科子系统不可用而清理主会话。
+          // 还要尝试 GSMIS 我的课表，不能因本科子系统不可用而清理主会话。
           return Result.failure(
               localBusinessApiException(code, defaultMessage, HttpStatusCode.BadGateway)
           )

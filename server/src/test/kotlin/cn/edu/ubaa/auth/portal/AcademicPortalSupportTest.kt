@@ -241,11 +241,14 @@ class AcademicPortalSupportTest {
       engine {
         addHandler { request ->
           when {
-            request.url.encodedPath.endsWith("/xsxkCourse/loadKbxx.do") -> {
-              assertEquals("0", request.url.parameters["sfyx"])
+            request.url.encodedPath.endsWith("/kfdxnxqcx.do") ->
+                respond(
+                    """{"code":"0","datas":{"kfdxnxqcx":{"totalSize":1,"rows":[{"XNXQDM":"20261","XNXQDM_DISPLAY":"示例学期"}]}}}"""
+                )
+            request.url.encodedPath.endsWith("/bykb/loadXskbData.do") -> {
+              assertEquals(io.ktor.http.HttpMethod.Post, request.method)
               respond(
-                  content =
-                      """{"results":[],"xkjgList":[{"SFYXXKJG":0,"BJDM":"test-class","XNXQDM":"20261","XNXQMC":"示例学期"}],"rqpkjgallList":[]}""",
+                  content = """{"code":1,"jgList":[],"rwList":[],"jcfaList":[]}""",
                   status = HttpStatusCode.OK,
                   headers = jsonHeaders(),
               )

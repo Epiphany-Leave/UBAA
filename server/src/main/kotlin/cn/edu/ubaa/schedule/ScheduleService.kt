@@ -1,9 +1,12 @@
 package cn.edu.ubaa.schedule
 
+import cn.edu.ubaa.api.feature.GraduateScheduleAuthenticationException
+import cn.edu.ubaa.api.feature.fetchGraduateSchedule
 import cn.edu.ubaa.auth.ByxtService
 import cn.edu.ubaa.auth.GlobalSessionManager
 import cn.edu.ubaa.auth.LoginException
 import cn.edu.ubaa.auth.SessionManager
+import cn.edu.ubaa.auth.UnsupportedAcademicPortalException
 import cn.edu.ubaa.auth.ensureUndergradPortalAccess
 import cn.edu.ubaa.metrics.AppObservability
 import cn.edu.ubaa.model.dto.*
@@ -38,13 +41,9 @@ class ScheduleService(
   /** 获取用户可选的所有学期列表。 */
   suspend fun fetchTerms(username: String): List<Term> {
     val session = sessionManager.requireSession(username)
-    ensureUndergradPortalAccess(
-        sessionManager = sessionManager,
-        username = username,
-        session = session,
-        graduateUnsupportedMessage = "研究生账号暂不支持当前本科教务接口",
-        unavailableExceptionFactory = { ScheduleException("BYXT service unavailable") },
-    )
+    session.graduateScheduleIfNeeded(username)?.let {
+      return it.terms()
+    }
     val response = session.getTerms()
     val body = response.bodyAsText()
 
@@ -68,13 +67,9 @@ class ScheduleService(
   /** 获取指定学期的周次划分。 */
   suspend fun fetchWeeks(username: String, termCode: String): List<Week> {
     val session = sessionManager.requireSession(username)
-    ensureUndergradPortalAccess(
-        sessionManager = sessionManager,
-        username = username,
-        session = session,
-        graduateUnsupportedMessage = "研究生账号暂不支持当前本科教务接口",
-        unavailableExceptionFactory = { ScheduleException("BYXT service unavailable") },
-    )
+    session.graduateScheduleIfNeeded(username)?.let {
+      return it.weeks(termCode, graduateToday())
+    }
     val response = session.getWeeks(termCode)
     val body = response.bodyAsText()
 
@@ -96,13 +91,9 @@ class ScheduleService(
   /** 获取周课表详情。 */
   suspend fun fetchWeeklySchedule(username: String, termCode: String, week: Int): WeeklySchedule {
     val session = sessionManager.requireSession(username)
-    ensureUndergradPortalAccess(
-        sessionManager = sessionManager,
-        username = username,
-        session = session,
-        graduateUnsupportedMessage = "研究生账号暂不支持当前本科教务接口",
-        unavailableExceptionFactory = { ScheduleException("BYXT service unavailable") },
-    )
+    session.graduateScheduleIfNeeded(username)?.let {
+      return it.weekly(termCode, week)
+    }
     val response = session.getWeeklySchedule(termCode, week)
     val body = response.bodyAsText()
 
@@ -124,13 +115,9 @@ class ScheduleService(
   /** 获取今日排课摘要。 */
   suspend fun fetchTodaySchedule(username: String): List<TodayClass> {
     val session = sessionManager.requireSession(username)
-    ensureUndergradPortalAccess(
-        sessionManager = sessionManager,
-        username = username,
-        session = session,
-        graduateUnsupportedMessage = "研究生账号暂不支持当前本科教务接口",
-        unavailableExceptionFactory = { ScheduleException("BYXT service unavailable") },
-    )
+    session.graduateScheduleIfNeeded(username)?.let {
+      return it.today(graduateToday())
+    }
     val today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
     val response = session.getTodaySchedule(today)
     val body = response.bodyAsText()
@@ -148,6 +135,34 @@ class ScheduleService(
         }
 
     return todayResponse.datas
+  }
+
+  private fun graduateToday() =
+      kotlinx.datetime.LocalDate.parse(
+          LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).toString()
+      )
+
+  private suspend fun SessionManager.UserSession.graduateScheduleIfNeeded(
+      username: String,
+  ): GraduateSchedule? {
+    try {
+      ensureUndergradPortalAccess(
+          sessionManager = sessionManager,
+          username = username,
+          session = this,
+          graduateUnsupportedMessage = "研究生账号暂不支持当前本科教务接口",
+          unavailableExceptionFactory = { ScheduleException("BYXT service unavailable") },
+      )
+    } catch (_: UnsupportedAcademicPortalException) {
+      try {
+        return AppObservability.observeUpstreamRequest("yjsxk", "get_schedule") {
+          fetchGraduateSchedule(client, VpnCipher::toVpnUrl)
+        }
+      } catch (_: GraduateScheduleAuthenticationException) {
+        throw LoginException("Graduate course selection session expired")
+      }
+    }
+    return null
   }
 
   private suspend fun SessionManager.UserSession.getTerms(): HttpResponse {

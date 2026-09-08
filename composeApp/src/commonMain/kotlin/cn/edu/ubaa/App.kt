@@ -26,11 +26,13 @@ import cn.edu.ubaa.api.auth.AppAnnouncement
 import cn.edu.ubaa.api.auth.AppVersionCheckResponse
 import cn.edu.ubaa.api.auth.UpdateService
 import cn.edu.ubaa.api.storage.AnnouncementReadStore
+import cn.edu.ubaa.repository.ScheduleStore
 import cn.edu.ubaa.ui.common.components.ReleaseNotesText
 import cn.edu.ubaa.ui.navigation.MainAppScreen
 import cn.edu.ubaa.ui.screens.auth.AuthViewModel
 import cn.edu.ubaa.ui.screens.auth.ConnectionModeSelectionScreen
 import cn.edu.ubaa.ui.screens.auth.LoginScreen
+import cn.edu.ubaa.ui.screens.schedule.OfflineScheduleScreen
 import cn.edu.ubaa.ui.screens.splash.SplashScreen
 import cn.edu.ubaa.ui.theme.PreloadFonts
 import cn.edu.ubaa.ui.theme.UBAATheme
@@ -60,6 +62,7 @@ fun App() {
     val availableConnectionModes = remember { ConnectionRuntime.availableModes() }
     var selectedConnectionMode by remember { mutableStateOf<ConnectionMode?>(null) }
     var modeResolved by remember { mutableStateOf(false) }
+    var showOfflineSchedule by remember { mutableStateOf(false) }
 
     // 启动流程控制状态
     var isSplashFinished by remember { mutableStateOf(false) }
@@ -88,6 +91,7 @@ fun App() {
     LaunchedEffect(Unit) {
       selectedConnectionMode = ConnectionRuntime.resolveSelectedMode()
       modeResolved = true
+      if (ScheduleStore.hasSavedSchedule()) isSplashFinished = true
       selectedConnectionMode?.let { bootstrapForMode(it) }
     }
 
@@ -214,6 +218,7 @@ fun App() {
               modifier = Modifier.fillMaxSize(),
           )
       !isSplashFinished -> SplashScreen(modifier = Modifier.fillMaxSize())
+      showOfflineSchedule -> OfflineScheduleScreen(onBack = { showOfflineSchedule = false })
       uiState.isLoggedIn && uiState.userData != null -> {
         val userData = uiState.userData!!
         MainAppScreen(
@@ -253,6 +258,8 @@ fun App() {
             captchaRequired = uiState.captchaRequired,
             captchaInfo = uiState.captchaInfo,
             error = uiState.error,
+            onOfflineSchedule =
+                if (ScheduleStore.hasSavedSchedule()) ({ showOfflineSchedule = true }) else null,
             modifier = Modifier.background(MaterialTheme.colorScheme.background).fillMaxSize(),
         )
       }

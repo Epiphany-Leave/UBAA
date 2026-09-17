@@ -86,24 +86,6 @@ fn check(response: &HttpResponse) -> Result<()> {
     })
 }
 
-pub(crate) fn fallback_error(original: &UbaaError, graduate: &UbaaError) -> UbaaError {
-    let mut combined = original.clone();
-    combined.message = format!("{}；GSMIS 后备错误：{:?}", original.message, graduate.code);
-    combined
-}
-
-pub(crate) fn can_fallback(error: &UbaaError) -> bool {
-    !matches!(
-        error.code,
-        ErrorCode::AuthenticationRequired
-            | ErrorCode::InvalidCredentials
-            | ErrorCode::PasswordRiskConfirmationFailed
-    ) && matches!(
-        error.kind,
-        ErrorKind::Authentication | ErrorKind::Network | ErrorKind::Upstream | ErrorKind::Parse
-    )
-}
-
 fn invalid(field: &str) -> UbaaError {
     UbaaError::new(
         ErrorCode::ParseError,

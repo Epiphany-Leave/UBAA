@@ -1,5 +1,7 @@
 # 当前迁移与交付状态
 
+2026-09-17 ui21 身份隔离加固：删除 Core 内部未知身份跨本科/GSMIS 重试、学期格式猜身份、空本科校历切研究生等历史回退；保留原 facade 身份门禁。现在内部学期、周次、今日课表、考试、成绩与整学期导入同样要求明确身份。研究生学号大小写均支持；未知/继续教育号码直接报错，零教务请求。已知身份即使接口失败也不跨系统；共用传输与按域 Cookie 基础设施不等于共用教务接口。Core lib 248 项、facade 21 项全通过，refs、敏感扫描、diff 检查通过。全量 `just check` 仍受 references shell 自测 Windows Temp 路径差异阻断。实际本科账号尚待用户验证，不能把自动化通过当成两类账号均已实测。
+
 2026-09-17 ui20 / GitHub 保存点：按用户要求，将当前累计 GSMIS、本科/研究生分流、离线课表、桌面组件与界面迁移源码保存到 Epiphany-Leave/UBAA 的 `UBAA2` 分支。本地分支 `migration/UBAA2` 避免 Windows 与既有 `ubaa2` 大小写冲突。新增 Android 系统拍照/相册通道，接入现有打卡选图、预览与确认流程；不自动提交。平台适配 11 项测试、Platform analyze、敏感扫描、diff 检查和 Android x64 构建通过；实际相机/相册操作等待 Pixel 8 验证。APK 为本地 `output/UBAA2-pixel8-photo-ui20.apk`（154441759 字节）。`just check` 仍在 references shell 自测因 Windows Temp 与 `/tmp` 路径差异失败，实际 `just refs` 通过。此分支是可继续开发的保存点，不代表全平台或全部业务验收完成；个人数据、APK、日志、失败截图和本机配置不纳入提交。
 
 ui19 交付：`output/UBAA2-pixel8-ygdk-reminder-ui19.apk`（154442232 字节，Android x64 debug，应用名 UBAA），等待 Pixel 8 验证。`just check` 在 references shell 自测因 Windows Temp 与 `/tmp` 路径表达差异失败，实际 `just refs` 通过；完整日志 `output/ygdk-reminder-ui19-check.log`。不声明自动完成判断或全量门禁已通过。

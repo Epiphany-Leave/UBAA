@@ -104,7 +104,7 @@ pub(crate) async fn get_grades(
     runtime: &mut crate::runtime::ClientRuntime,
     term_code: &str,
 ) -> Result<GradeData> {
-    if super::schedule::graduate_term(runtime, term_code) {
+    if super::schedule::require_academic_identity(runtime)? {
         let overview = super::gsmis::grades(runtime).await?;
         return Ok(GradeData {
             term_code: term_code.into(),
@@ -149,23 +149,10 @@ pub(crate) async fn get_overview(
     runtime: &mut crate::runtime::ClientRuntime,
 ) -> Result<GradeOverview> {
     super::require_session(runtime)?;
-    match super::schedule::graduate_account(runtime) {
-        Some(true) => return super::gsmis::grades(runtime).await,
-        Some(false) => return Ok(GradeOverview::default()),
-        None => {}
+    if super::schedule::require_academic_identity(runtime)? {
+        return super::gsmis::grades(runtime).await;
     }
-    let result = match super::schedule::ensure_undergraduate_portal(runtime).await {
-        Ok(()) => super::schedule::get_undergraduate_terms(runtime).await,
-        Err(error) => Err(error),
-    };
-    match result {
-        Ok(terms) if terms.is_empty() => super::gsmis::grades(runtime).await,
-        Ok(_) => Ok(GradeOverview::default()),
-        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::grades(runtime)
-            .await
-            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
-        Err(error) => Err(error),
-    }
+    Ok(GradeOverview::default())
 }
 
 fn value_text(value: Option<Value>) -> Option<String> {

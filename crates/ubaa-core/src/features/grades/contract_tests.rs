@@ -5,6 +5,7 @@ fn gsmis_empty_grades_are_success_without_schedule_dependency() {
     let (mut runtime, path) = crate::features::schedule::contract_tests::gsmis_test_runtime(
         r#"{"code":"0","datas":{"xscjcx":{"totalSize":0,"pageNumber":1,"rows":[]}}}"#,
     );
+    runtime.remember_account_name(Some("SY2600001"));
     let result = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -62,6 +63,7 @@ fn gsmis_paginated_grades_compute_graduate_points() {
         .unwrap();
     let mut runtime =
         crate::runtime::ClientRuntime::new(ConnectionMode::Direct, Transport, store).unwrap();
+    runtime.remember_account_name(Some("SY2600001"));
     let result = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

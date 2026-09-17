@@ -54,8 +54,15 @@ fn classify_student_number(number: &str) -> Option<bool> {
     None
 }
 
-pub(crate) fn graduate_term(runtime: &crate::runtime::ClientRuntime, term: &str) -> bool {
-    graduate_account(runtime).unwrap_or_else(|| super::gsmis::is_term(term))
+pub(crate) fn require_academic_identity(runtime: &crate::runtime::ClientRuntime) -> Result<bool> {
+    graduate_account(runtime).ok_or_else(|| {
+        UbaaError::new(
+            ErrorCode::InvalidInput,
+            ErrorKind::Input,
+            false,
+            "无法确认本科或研究生身份，已停止教务查询",
+        )
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -117,25 +124,11 @@ pub fn parse_exam(body: &str) -> Result<ExamArrangement> {
 /// 通过当前认证路线获取学期。
 pub(crate) async fn get_terms(runtime: &mut crate::runtime::ClientRuntime) -> Result<Vec<Term>> {
     super::require_session(runtime)?;
-    match graduate_account(runtime) {
-        Some(true) => return super::gsmis::terms(runtime).await,
-        Some(false) => {
-            ensure_undergraduate_portal(runtime).await?;
-            return get_undergraduate_terms(runtime).await;
-        }
-        None => {}
+    if require_academic_identity(runtime)? {
+        return super::gsmis::terms(runtime).await;
     }
-    let result = match ensure_undergraduate_portal(runtime).await {
-        Ok(()) => get_undergraduate_terms(runtime).await,
-        Err(error) => Err(error),
-    };
-    match result {
-        Ok(terms) => Ok(terms),
-        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::terms(runtime)
-            .await
-            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
-        Err(error) => Err(error),
-    }
+    ensure_undergraduate_portal(runtime).await?;
+    get_undergraduate_terms(runtime).await
 }
 
 pub(crate) async fn get_undergraduate_terms(
@@ -163,7 +156,7 @@ pub(crate) async fn get_weeks(
     runtime: &mut crate::runtime::ClientRuntime,
     term: &str,
 ) -> Result<Vec<Week>> {
-    if graduate_term(runtime, term) {
+    if require_academic_identity(runtime)? {
         let date = super::gsmis::current_date(runtime);
         return super::gsmis::schedule(runtime, term).await?.weeks(date);
     }
@@ -200,7 +193,7 @@ pub(crate) async fn get_week(
     term: &str,
     week: i32,
 ) -> Result<WeeklySchedule> {
-    if graduate_term(runtime, term) {
+    if require_academic_identity(runtime)? {
         return super::gsmis::schedule(runtime, term).await?.weekly(week);
     }
     ensure_undergraduate_portal(runtime).await?;
@@ -230,18 +223,10 @@ pub(crate) async fn get_today(
     runtime: &mut crate::runtime::ClientRuntime,
 ) -> Result<Vec<TodayClass>> {
     super::require_session(runtime)?;
-    match graduate_account(runtime) {
-        Some(true) => return super::gsmis::today(runtime).await,
-        Some(false) => return get_undergraduate_today(runtime).await,
-        None => {}
+    if require_academic_identity(runtime)? {
+        return super::gsmis::today(runtime).await;
     }
-    match get_undergraduate_today(runtime).await {
-        Ok(data) => Ok(data),
-        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::today(runtime)
-            .await
-            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
-        Err(error) => Err(error),
-    }
+    get_undergraduate_today(runtime).await
 }
 
 async fn get_undergraduate_today(
@@ -273,7 +258,7 @@ pub(crate) async fn get_exam(
     runtime: &mut crate::runtime::ClientRuntime,
     term: &str,
 ) -> Result<ExamArrangement> {
-    if graduate_term(runtime, term) {
+    if require_academic_identity(runtime)? {
         return super::gsmis::exams(runtime, term).await;
     }
     ensure_undergraduate_portal(runtime).await?;
@@ -299,26 +284,11 @@ pub(crate) async fn get_exam_terms(
     runtime: &mut crate::runtime::ClientRuntime,
 ) -> Result<Vec<Term>> {
     super::require_session(runtime)?;
-    match graduate_account(runtime) {
-        Some(true) => return super::gsmis::exam_terms(runtime).await,
-        Some(false) => {
-            ensure_undergraduate_portal(runtime).await?;
-            return get_undergraduate_terms(runtime).await;
-        }
-        None => {}
+    if require_academic_identity(runtime)? {
+        return super::gsmis::exam_terms(runtime).await;
     }
-    let result = match ensure_undergraduate_portal(runtime).await {
-        Ok(()) => get_undergraduate_terms(runtime).await,
-        Err(error) => Err(error),
-    };
-    match result {
-        Ok(terms) if terms.is_empty() => super::gsmis::exam_terms(runtime).await,
-        Ok(terms) => Ok(terms),
-        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::exam_terms(runtime)
-            .await
-            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
-        Err(error) => Err(error),
-    }
+    ensure_undergraduate_portal(runtime).await?;
+    get_undergraduate_terms(runtime).await
 }
 
 pub(crate) async fn ensure_undergraduate_portal(
@@ -491,14 +461,7 @@ pub(crate) async fn import_semester(
     runtime: &mut crate::runtime::ClientRuntime,
     requested: Option<&str>,
 ) -> Result<(Vec<Term>, crate::domain::SavedSemester)> {
-    let mut terms = get_terms(runtime).await?;
-    // UBAA-PR retries GSMIS when undergraduate semester import has no usable term.
-    if graduate_account(runtime) != Some(false)
-        && terms.is_empty()
-        && requested.is_none_or(super::gsmis::is_term)
-    {
-        terms = super::gsmis::terms(runtime).await?;
-    }
+    let terms = get_terms(runtime).await?;
     let term = requested
         .map(str::to_owned)
         .or_else(|| {
@@ -516,7 +479,7 @@ pub(crate) async fn import_semester(
                 "没有可导入的学期",
             )
         })?;
-    let (weeks, schedules) = if graduate_term(runtime, &term) {
+    let (weeks, schedules) = if require_academic_identity(runtime)? {
         let semester = super::gsmis::schedule(runtime, &term).await?;
         let today = super::gsmis::current_date(runtime);
         let weeks = semester.weeks(today)?;

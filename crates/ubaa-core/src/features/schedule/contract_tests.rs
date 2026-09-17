@@ -109,6 +109,7 @@ pub(crate) fn gsmis_test_runtime(
 #[test]
 fn gsmis_week_uses_verified_calendar_and_sections() {
     let (mut runtime, path) = gsmis_test_runtime(GSMIS_SCHEDULE);
+    runtime.remember_account_name(Some("SY2600001"));
     let executor = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -127,6 +128,7 @@ fn gsmis_week_uses_verified_calendar_and_sections() {
 fn gsmis_empty_exam_is_success() {
     let (mut runtime, path) =
         gsmis_test_runtime(r#"{"success":true,"countKs":0,"countKcks":0,"countJk":0}"#);
+    runtime.remember_account_name(Some("SY2600001"));
     let result = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -137,7 +139,7 @@ fn gsmis_empty_exam_is_success() {
 }
 
 #[test]
-fn gsmis_capability_fallback_returns_graduate_terms() {
+fn confirmed_graduate_identity_returns_graduate_terms() {
     use crate::domain::ConnectionMode;
     use crate::ports::{HttpRequest, HttpResponse, HttpTransport};
     use crate::session::{FileSessionStore, SessionSnapshot, SessionStore};
@@ -187,6 +189,7 @@ fn gsmis_capability_fallback_returns_graduate_terms() {
     let mut runtime =
         crate::runtime::ClientRuntime::new(ConnectionMode::Direct, GraduateTransport, store)
             .unwrap();
+    runtime.remember_account_name(Some("SY2600001"));
     let result = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

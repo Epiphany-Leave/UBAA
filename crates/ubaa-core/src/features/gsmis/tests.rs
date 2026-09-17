@@ -7,13 +7,84 @@ use std::sync::{Arc, Mutex};
 struct Transport<F>(F);
 
 #[test]
+fn unknown_identity_blocks_all_academic_requests_before_network() {
+    let executor = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    for mode in [ConnectionMode::Direct, ConnectionMode::WebVpn] {
+        for account in [None, Some("623231143"), Some("unknown")] {
+            let (mut client, path) = runtime(mode, |_| {
+                panic!("unknown identity must not send academic requests")
+            });
+            client.remember_account_name(account);
+            executor.block_on(async {
+                assert!(
+                    crate::features::schedule::get_terms(&mut client)
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::get_exam_terms(&mut client)
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::get_weeks(&mut client, "20261")
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::get_week(&mut client, "2026-2027-1", 1)
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::get_today(&mut client)
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::get_exam(&mut client, "20261")
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::grades::get_grades(&mut client, "20261")
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::grades::get_overview(&mut client)
+                        .await
+                        .is_err()
+                );
+                assert!(
+                    crate::features::schedule::import_semester(&mut client, None)
+                        .await
+                        .is_err()
+                );
+            });
+            let _ = std::fs::remove_dir_all(path);
+        }
+    }
+}
+
+#[test]
 fn known_student_identity_never_switches_system_on_failure() {
     let executor = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
-    for account in ["19000001", "SY2600001", "ZY2600001", "BY2600001"] {
-        let graduate = account.starts_with(|c: char| c.is_ascii_uppercase());
+    for account in [
+        "19000001",
+        "SY2600001",
+        "sy2600001",
+        "Sy2600001",
+        "ZY2600001",
+        "BY2600001",
+    ] {
+        let graduate = account.starts_with(|c: char| c.is_ascii_alphabetic());
         let (mut client, path) = runtime(ConnectionMode::Direct, move |request| {
             assert_eq!(
                 request.url.contains("gsmis.buaa.edu.cn"),
@@ -50,7 +121,7 @@ fn known_student_identity_never_switches_system_on_failure() {
 }
 
 #[test]
-fn academic_queries_check_business_terms_before_skipping_gsmis() {
+fn academic_queries_use_confirmed_identity() {
     let executor = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -88,6 +159,11 @@ fn academic_queries_check_business_terms_before_skipping_gsmis() {
                 body.as_bytes().to_vec(),
             ))
         });
+        client.remember_account_name(Some(if undergraduate {
+            "19000001"
+        } else {
+            "SY2600001"
+        }));
         let terms = executor
             .block_on(crate::features::schedule::get_exam_terms(&mut client))
             .unwrap();
@@ -122,7 +198,7 @@ fn academic_queries_check_business_terms_before_skipping_gsmis() {
 }
 
 #[test]
-fn semester_import_tries_gsmis_when_undergraduate_terms_are_empty() {
+fn graduate_semester_import_uses_gsmis_only() {
     let (mut client, path) = runtime(ConnectionMode::Direct, |request| {
         let body = if request.url.ends_with("currentUser.do") {
             "{}"
@@ -199,18 +275,6 @@ fn semester_import_fetches_once_and_keeps_empty_weeks() {
 
 #[test]
 fn gsmis_review_authentication_failures_never_fallback() {
-    for code in [
-        ErrorCode::AuthenticationRequired,
-        ErrorCode::InvalidCredentials,
-        ErrorCode::PasswordRiskConfirmationFailed,
-    ] {
-        assert!(!can_fallback(&UbaaError::new(
-            code,
-            ErrorKind::Authentication,
-            false,
-            "fixture"
-        )));
-    }
     let (mut client, path) = runtime(ConnectionMode::Direct, |request| {
         assert!(
             request.url.contains("byxt.buaa.edu.cn"),
@@ -223,6 +287,7 @@ fn gsmis_review_authentication_failures_never_fallback() {
         };
         Ok(HttpResponse::new(status, request.url, b"{}".to_vec()))
     });
+    client.remember_account_name(Some("19000001"));
     let result = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -230,30 +295,6 @@ fn gsmis_review_authentication_failures_never_fallback() {
         .block_on(crate::features::schedule::get_terms(&mut client));
     let _ = std::fs::remove_dir_all(path);
     assert_eq!(result.unwrap_err().code, ErrorCode::AuthenticationRequired);
-}
-
-#[test]
-fn gsmis_review_double_failure_preserves_original_error_contract() {
-    let original = UbaaError::new(
-        ErrorCode::NetworkError,
-        ErrorKind::Network,
-        true,
-        "Original network failure",
-    );
-    let secondary = UbaaError::new(
-        ErrorCode::AuthenticationRequired,
-        ErrorKind::Authentication,
-        false,
-        "private diagnostic must not be appended",
-    );
-    let combined = fallback_error(&original, &secondary);
-    assert_eq!(
-        (combined.code, combined.kind, combined.retryable),
-        (original.code, original.kind, original.retryable)
-    );
-    assert!(combined.message.contains(&original.message));
-    assert!(combined.message.contains("AuthenticationRequired"));
-    assert!(!combined.message.contains("private diagnostic"));
 }
 
 #[test]
@@ -322,10 +363,9 @@ fn runtime<F: Fn(HttpRequest) -> Result<HttpResponse> + Send + Sync + 'static>(
             }),
         )
         .unwrap();
-    (
-        ClientRuntime::new(mode, Transport(handler), store).unwrap(),
-        path,
-    )
+    let mut client = ClientRuntime::new(mode, Transport(handler), store).unwrap();
+    client.remember_account_name(Some("SY2600001"));
+    (client, path)
 }
 
 #[test]

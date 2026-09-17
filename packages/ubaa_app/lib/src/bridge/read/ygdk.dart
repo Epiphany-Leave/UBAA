@@ -118,9 +118,15 @@ FeatureResult _mapYgdkOverviewResult(
         ),
       )
       .toList(growable: false);
-  final summary = data.summary.termTarget == null
-      ? '已打卡 ${data.summary.termCount} 次'
-      : '学期进度 ${data.summary.termCount}/${data.summary.termTarget}';
+  final summary = [
+    (data.summary.termTarget ?? 0) > 0
+        ? '本学期认定次数 ${data.summary.termCount} / ${data.summary.termTarget}'
+        : '本学期认定次数 ${data.summary.termCount} 次',
+    if (data.summary.weekCount != null)
+      data.summary.weekTarget == null
+          ? '本周打卡 ${data.summary.weekCount} 次'
+          : '本周打卡 ${data.summary.weekCount} / ${data.summary.weekTarget}',
+  ].join('\n');
   return FeatureResult.success(
     summary: summary,
     details: details,
@@ -139,6 +145,8 @@ FeatureResult _mapYgdkRecordsResult(
           subtitle: item.createdAtLabel ?? item.createdAt,
           fields: _compactFields(<FeatureField?>[
             _field('记录编号', '${item.recordId}'),
+            if (item.itemId != null) _field('项目编号', '${item.itemId}'),
+            if (item.state != null) _field('记录状态编号', '${item.state}'),
             _field('开始时间', item.startTime),
             _field('结束时间', item.endTime),
             _field('地点', item.place),

@@ -1,3 +1,4 @@
+import 'timetable.dart';
 import 'package:meta/meta.dart';
 
 import '../common/error.dart';
@@ -18,6 +19,8 @@ class FeatureSnapshot {
     this.resolvedRoute,
     this.pagination,
     this.updatedAt,
+    this.scheduleNavigation,
+    this.timetable,
   });
 
   final FeatureId feature;
@@ -32,6 +35,8 @@ class FeatureSnapshot {
   /// Core 返回的服务端分页元数据；只对支持分页的 typed 查询存在。
   final FeaturePagination? pagination;
   final DateTime? updatedAt;
+  final ScheduleNavigation? scheduleNavigation;
+  final Timetable? timetable;
 
   FeatureSnapshot copyWith({
     FeatureLoadStatus? status,
@@ -46,6 +51,9 @@ class FeatureSnapshot {
     bool clearDetails = false,
     bool clearResolvedRoute = false,
     bool clearPagination = false,
+    ScheduleNavigation? scheduleNavigation,
+    Timetable? timetable,
+    bool clearTimetable = false,
   }) => FeatureSnapshot(
     feature: feature,
     status: status ?? this.status,
@@ -57,6 +65,8 @@ class FeatureSnapshot {
         : (resolvedRoute ?? this.resolvedRoute),
     pagination: clearPagination ? null : (pagination ?? this.pagination),
     updatedAt: updatedAt ?? this.updatedAt,
+    scheduleNavigation: scheduleNavigation ?? this.scheduleNavigation,
+    timetable: clearTimetable ? null : (timetable ?? this.timetable),
   );
 }
 
@@ -92,20 +102,28 @@ class FeatureResult {
     this.details = const <FeatureDetail>[],
     this.resolvedRoute,
     this.pagination,
+    this.scheduleNavigation,
+    this.timetable,
   }) : isEmpty = false,
        error = null;
 
-  const FeatureResult.empty({this.resolvedRoute, this.pagination})
-    : summary = null,
-      details = const <FeatureDetail>[],
-      isEmpty = true,
-      error = null;
+  const FeatureResult.empty({
+    this.resolvedRoute,
+    this.pagination,
+    this.scheduleNavigation,
+    this.timetable,
+  }) : summary = null,
+       details = const <FeatureDetail>[],
+       isEmpty = true,
+       error = null;
 
   const FeatureResult.failure(this.error)
     : summary = null,
       details = const <FeatureDetail>[],
       resolvedRoute = null,
       pagination = null,
+      scheduleNavigation = null,
+      timetable = null,
       isEmpty = false;
 
   final String? summary;
@@ -116,6 +134,22 @@ class FeatureResult {
   final FeaturePagination? pagination;
   final bool isEmpty;
   final UiError? error;
+  final ScheduleNavigation? scheduleNavigation;
+  final Timetable? timetable;
+}
+
+@immutable
+class ScheduleNavigation {
+  const ScheduleNavigation({
+    required this.terms,
+    required this.weeks,
+    required this.term,
+    required this.week,
+  });
+  final Map<String, String> terms;
+  final Map<int, String> weeks;
+  final String term;
+  final int week;
 }
 
 /// 只读详情页使用的稳定展示模型，不携带原始上游载荷。

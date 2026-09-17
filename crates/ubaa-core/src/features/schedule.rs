@@ -34,6 +34,30 @@ pub const AAS_VERIFY_URL: &str =
 const SCHEDULE_REFERER_URL: &str = "https://byxt.buaa.edu.cn/jwapp/sys/homeapp/index.html";
 const EXAM_REFERER_URL: &str = "https://byxt.buaa.edu.cn/jwapp/sys/homeapp/home/index.html";
 
+/// User-supplied student-number rule; None is unknown, never assumed undergraduate.
+pub(crate) fn graduate_account(runtime: &crate::runtime::ClientRuntime) -> Option<bool> {
+    classify_student_number(runtime.account_name()?)
+}
+
+fn classify_student_number(number: &str) -> Option<bool> {
+    let number = number.trim();
+    if number.len() == 8 && number.bytes().all(|c| c.is_ascii_digit()) {
+        return Some(false);
+    }
+    let digits = number.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+    if digits.len() < number.len()
+        && !digits.is_empty()
+        && digits.bytes().all(|c| c.is_ascii_digit())
+    {
+        return Some(true);
+    }
+    None
+}
+
+pub(crate) fn graduate_term(runtime: &crate::runtime::ClientRuntime, term: &str) -> bool {
+    graduate_account(runtime).unwrap_or_else(|| super::gsmis::is_term(term))
+}
+
 #[derive(Debug, Deserialize)]
 struct ListResponse<T> {
     code: String,
@@ -92,7 +116,31 @@ pub fn parse_exam(body: &str) -> Result<ExamArrangement> {
 
 /// 通过当前认证路线获取学期。
 pub(crate) async fn get_terms(runtime: &mut crate::runtime::ClientRuntime) -> Result<Vec<Term>> {
-    ensure_undergraduate_portal(runtime).await?;
+    super::require_session(runtime)?;
+    match graduate_account(runtime) {
+        Some(true) => return super::gsmis::terms(runtime).await,
+        Some(false) => {
+            ensure_undergraduate_portal(runtime).await?;
+            return get_undergraduate_terms(runtime).await;
+        }
+        None => {}
+    }
+    let result = match ensure_undergraduate_portal(runtime).await {
+        Ok(()) => get_undergraduate_terms(runtime).await,
+        Err(error) => Err(error),
+    };
+    match result {
+        Ok(terms) => Ok(terms),
+        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::terms(runtime)
+            .await
+            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
+        Err(error) => Err(error),
+    }
+}
+
+pub(crate) async fn get_undergraduate_terms(
+    runtime: &mut crate::runtime::ClientRuntime,
+) -> Result<Vec<Term>> {
     let url = runtime.url(TERMS_URL)?;
     let referer = runtime.url(SCHEDULE_REFERER_URL)?;
     let response = super::get_with_redirects(
@@ -115,6 +163,10 @@ pub(crate) async fn get_weeks(
     runtime: &mut crate::runtime::ClientRuntime,
     term: &str,
 ) -> Result<Vec<Week>> {
+    if graduate_term(runtime, term) {
+        let date = super::gsmis::current_date(runtime);
+        return super::gsmis::schedule(runtime, term).await?.weeks(date);
+    }
     if term.trim().is_empty() {
         return Err(UbaaError::new(
             ErrorCode::InvalidInput,
@@ -148,6 +200,9 @@ pub(crate) async fn get_week(
     term: &str,
     week: i32,
 ) -> Result<WeeklySchedule> {
+    if graduate_term(runtime, term) {
+        return super::gsmis::schedule(runtime, term).await?.weekly(week);
+    }
     ensure_undergraduate_portal(runtime).await?;
     let url = runtime.url(WEEK_URL)?;
     let referer = runtime.url(SCHEDULE_REFERER_URL)?;
@@ -172,6 +227,24 @@ pub(crate) async fn get_week(
 
 /// 使用上海日历日期获取今日课程。
 pub(crate) async fn get_today(
+    runtime: &mut crate::runtime::ClientRuntime,
+) -> Result<Vec<TodayClass>> {
+    super::require_session(runtime)?;
+    match graduate_account(runtime) {
+        Some(true) => return super::gsmis::today(runtime).await,
+        Some(false) => return get_undergraduate_today(runtime).await,
+        None => {}
+    }
+    match get_undergraduate_today(runtime).await {
+        Ok(data) => Ok(data),
+        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::today(runtime)
+            .await
+            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
+        Err(error) => Err(error),
+    }
+}
+
+async fn get_undergraduate_today(
     runtime: &mut crate::runtime::ClientRuntime,
 ) -> Result<Vec<TodayClass>> {
     ensure_undergraduate_portal(runtime).await?;
@@ -200,6 +273,9 @@ pub(crate) async fn get_exam(
     runtime: &mut crate::runtime::ClientRuntime,
     term: &str,
 ) -> Result<ExamArrangement> {
+    if graduate_term(runtime, term) {
+        return super::gsmis::exams(runtime, term).await;
+    }
     ensure_undergraduate_portal(runtime).await?;
     let mut url = url::Url::parse(&runtime.url(EXAM_URL)?).map_err(|_| invalid_url())?;
     url.query_pairs_mut().append_pair("termCode", term);
@@ -219,7 +295,35 @@ pub(crate) async fn get_exam(
     parse_exam(&super::body(&response))
 }
 
-async fn ensure_undergraduate_portal(runtime: &mut crate::runtime::ClientRuntime) -> Result<()> {
+pub(crate) async fn get_exam_terms(
+    runtime: &mut crate::runtime::ClientRuntime,
+) -> Result<Vec<Term>> {
+    super::require_session(runtime)?;
+    match graduate_account(runtime) {
+        Some(true) => return super::gsmis::exam_terms(runtime).await,
+        Some(false) => {
+            ensure_undergraduate_portal(runtime).await?;
+            return get_undergraduate_terms(runtime).await;
+        }
+        None => {}
+    }
+    let result = match ensure_undergraduate_portal(runtime).await {
+        Ok(()) => get_undergraduate_terms(runtime).await,
+        Err(error) => Err(error),
+    };
+    match result {
+        Ok(terms) if terms.is_empty() => super::gsmis::exam_terms(runtime).await,
+        Ok(terms) => Ok(terms),
+        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::exam_terms(runtime)
+            .await
+            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
+        Err(error) => Err(error),
+    }
+}
+
+pub(crate) async fn ensure_undergraduate_portal(
+    runtime: &mut crate::runtime::ClientRuntime,
+) -> Result<()> {
     let mut response = probe_undergraduate_portal(runtime).await?;
     if undergraduate_portal_requires_sso(&response) {
         activate_undergraduate_portal(runtime).await?;
@@ -279,7 +383,15 @@ fn classify_undergraduate_portal(response: &crate::ports::HttpResponse) -> Resul
             "本科教务门户需要认证",
         ));
     }
-    if response.final_url.contains("/jwapp/sys/byrhmhsy/") {
+    let direct_url = crate::connection::from_webvpn_url(&response.final_url)
+        .unwrap_or_else(|_| response.final_url.clone());
+    let text = super::body(response);
+    if response.status == 200
+        && direct_url.contains("/jwapp/sys/byrhmhsy/")
+        && (text.trim_start().starts_with('{')
+            || text.trim_start().starts_with('[')
+            || text.trim().is_empty())
+    {
         return Err(UbaaError::new(
             ErrorCode::PermissionDenied,
             ErrorKind::Authentication,
@@ -301,6 +413,14 @@ fn classify_undergraduate_portal(response: &crate::ports::HttpResponse) -> Resul
             ErrorKind::Upstream,
             false,
             "本科教务门户探测失败",
+        ));
+    }
+    if !text.trim_start().starts_with('{') && !text.trim_start().starts_with('[') {
+        return Err(UbaaError::new(
+            ErrorCode::UpstreamChanged,
+            ErrorKind::Upstream,
+            false,
+            "本科教务门户未返回资料数据",
         ));
     }
     Ok(())
@@ -365,4 +485,144 @@ fn ensure_ok(code: &str, context: &str) -> Result<()> {
 
 #[cfg(test)]
 #[path = "schedule/contract_tests.rs"]
-mod contract_tests;
+pub(crate) mod contract_tests;
+/// Fetch a complete semester before the caller replaces its local cache.
+pub(crate) async fn import_semester(
+    runtime: &mut crate::runtime::ClientRuntime,
+    requested: Option<&str>,
+) -> Result<(Vec<Term>, crate::domain::SavedSemester)> {
+    let mut terms = get_terms(runtime).await?;
+    // UBAA-PR retries GSMIS when undergraduate semester import has no usable term.
+    if graduate_account(runtime) != Some(false)
+        && terms.is_empty()
+        && requested.is_none_or(super::gsmis::is_term)
+    {
+        terms = super::gsmis::terms(runtime).await?;
+    }
+    let term = requested
+        .map(str::to_owned)
+        .or_else(|| {
+            terms
+                .iter()
+                .find(|t| t.selected)
+                .or_else(|| terms.first())
+                .map(|t| t.item_code.clone())
+        })
+        .ok_or_else(|| {
+            crate::error::UbaaError::new(
+                crate::error::ErrorCode::InvalidInput,
+                crate::error::ErrorKind::Input,
+                false,
+                "没有可导入的学期",
+            )
+        })?;
+    let (weeks, schedules) = if graduate_term(runtime, &term) {
+        let semester = super::gsmis::schedule(runtime, &term).await?;
+        let today = super::gsmis::current_date(runtime);
+        let weeks = semester.weeks(today)?;
+        let schedules = weeks
+            .iter()
+            .map(|week| semester.weekly(week.serial_number))
+            .collect::<Result<Vec<_>>>()?;
+        (weeks, schedules)
+    } else {
+        let weeks = get_weeks(runtime, &term).await?;
+        if weeks.len() > 128 {
+            return Err(crate::error::UbaaError::new(
+                crate::error::ErrorCode::ParseError,
+                crate::error::ErrorKind::Parse,
+                false,
+                "周次数量异常",
+            ));
+        }
+        let mut schedules = Vec::with_capacity(weeks.len());
+        for week in &weeks {
+            schedules.push(get_week(runtime, &term, week.serial_number).await?);
+        }
+        complete_section_times(&mut schedules)?;
+        (weeks, schedules)
+    };
+    let mut semester = crate::domain::SavedSemester {
+        term,
+        weeks,
+        schedules,
+        updated_at: chrono::Utc::now()
+            .with_timezone(&chrono_tz::Asia::Shanghai)
+            .format("%Y-%m-%d %H:%M")
+            .to_string(),
+    };
+    crate::session::schedule_cache::validate(&terms, &semester)?;
+    for week in &mut semester.weeks {
+        week.start_date = crate::session::schedule_cache::schedule_date(&week.start_date)
+            .unwrap()
+            .to_string();
+        week.end_date = crate::session::schedule_cache::schedule_date(&week.end_date)
+            .unwrap()
+            .to_string();
+    }
+    Ok((terms, semester))
+}
+
+// UBAA-PR scheduleSectionTimes: unknown times stay blank; never borrow graduate times.
+fn complete_section_times(schedules: &mut [WeeklySchedule]) -> Result<()> {
+    let courses: Vec<_> = schedules.iter().flat_map(|s| &s.arranged_list).collect();
+    let explicit: Vec<_> = schedules.iter().flat_map(|s| &s.section_times).collect();
+    let count = courses
+        .iter()
+        .filter_map(|c| c.end_section.or(c.begin_section))
+        .chain(explicit.iter().map(|s| s.section))
+        .max()
+        .unwrap_or(12)
+        .max(12);
+    if count > 64 {
+        return Err(UbaaError::new(
+            ErrorCode::ParseError,
+            ErrorKind::Parse,
+            false,
+            "课表节次数量异常",
+        ));
+    }
+    let unique = |values: Vec<&str>| {
+        let values: std::collections::BTreeSet<_> =
+            values.into_iter().filter(|v| !v.is_empty()).collect();
+        if values.len() == 1 {
+            values.first().unwrap().to_string()
+        } else {
+            String::new()
+        }
+    };
+    let timeline: Vec<_> = (1..=count)
+        .map(|section| {
+            let known: Vec<_> = explicit.iter().filter(|s| s.section == section).collect();
+            let start_time = unique(if known.is_empty() {
+                courses
+                    .iter()
+                    .filter(|c| c.begin_section == Some(section))
+                    .filter_map(|c| c.begin_time.as_deref())
+                    .collect()
+            } else {
+                known.iter().map(|s| s.start_time.as_str()).collect()
+            });
+            let end_time = unique(if known.is_empty() {
+                courses
+                    .iter()
+                    .filter(|c| c.end_section == Some(section))
+                    .filter_map(|c| c.end_time.as_deref())
+                    .collect()
+            } else {
+                known.iter().map(|s| s.end_time.as_str()).collect()
+            });
+            crate::domain::SectionTime {
+                section,
+                start_time,
+                end_time,
+            }
+        })
+        .collect();
+    for schedule in schedules {
+        if schedule.section_times.is_empty() {
+            schedule.section_times.clone_from(&timeline);
+        }
+    }
+    Ok(())
+}

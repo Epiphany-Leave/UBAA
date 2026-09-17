@@ -5,6 +5,37 @@ import 'package:ubaa_domain/ubaa_domain.dart';
 import 'package:ubaa_platform/ubaa_platform.dart';
 
 void main() {
+  test('未适配研究生考试从 Bridge 到页面明确显示暂不支持', () async {
+    final controller = AppController(
+      backend: BridgeBackend(_UnsupportedExamClient()),
+    );
+    addTearDown(controller.dispose);
+    await controller.refreshFeatureQuery(
+      FeatureId.exam,
+      const FeatureQuery(term: '20261'),
+    );
+    final error = controller.snapshots[FeatureId.exam]!.error!;
+    expect(error.code, UbaaErrorCode.unsupported);
+    expect(error.title, '暂不支持');
+    expect(error.retryable, isFalse);
+    expect(error.kind, UbaaErrorKind.upstream);
+    expect(error.resolvedRoute, ConnectionMode.webvpn);
+    expect(error.message, isNot(contains('接口')));
+    expect(error.message, isNot(contains('upstream-secret')));
+  });
+  test('unsupported 机器码保留暂不支持语义', () async {
+    final backend = BridgeBackend(_LoginFailureClient('unsupported'));
+    await expectLater(
+      backend.login(const LoginInput(username: 'fixture', password: 'fixture')),
+      throwsA(
+        isA<BackendException>().having(
+          (error) => error.code,
+          '代码',
+          UbaaErrorCode.unsupported,
+        ),
+      ),
+    );
+  });
   test('逐路线登录失败保留实际路线和禁止重试标志', () async {
     final backend = BridgeBackend(_LoginFailureClient('network_error'));
     await expectLater(
@@ -142,10 +173,10 @@ class _FailingReadClient implements BridgeClient {
   final BridgeErrorCode code;
   final BridgeErrorKind kind;
   @override
-  int contractVersion() => 9;
+  int contractVersion() => 12;
 
   @override
-  Future<BridgeRoutedTodayClasses> scheduleToday() async => throw BridgeError(
+  Future<BridgeSavedSchedule> savedSchedule() async => throw BridgeError(
     code: code,
     kind: kind,
     retryable: false,
@@ -159,6 +190,19 @@ class _FailingReadClient implements BridgeClient {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnsupportedError('测试不允许其它 Bridge 调用');
+}
+
+class _UnsupportedExamClient extends _FailingReadClient {
+  @override
+  Future<BridgeRoutedExamArrangement> examArrangement({
+    required String term,
+  }) async => throw const BridgeError(
+    code: BridgeErrorCode.unsupported,
+    kind: BridgeErrorKind.upstream,
+    retryable: false,
+    message: 'upstream-secret',
+    resolvedRoute: BridgeConnectionMode.webVpn,
+  );
 }
 
 class _LoginFailureClient extends _FailingReadClient {

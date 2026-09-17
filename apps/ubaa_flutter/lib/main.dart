@@ -3,6 +3,8 @@ import 'package:ubaa_bindings/ubaa_bindings.dart';
 import 'package:ubaa_host/ubaa_host.dart';
 import 'package:ubaa_platform/ubaa_platform.dart';
 
+import 'schedule_widget_channel.dart';
+
 /// 保留官方 Flutter 宿主的既有公开名称。
 typedef UbaaFlutterApp = UbaaAppHost;
 
@@ -17,11 +19,17 @@ Future<void> bootstrapUbaaFlutterApp({
   String Function()? debugHello,
   Future<PlatformCapabilities> Function()? createCapabilities,
   void Function(Widget)? runApplication,
-}) => bootstrapUbaaHost(
-  ensureFlutterInitialized:
-      ensureInitialized ?? WidgetsFlutterBinding.ensureInitialized,
-  initializeSdk: initializeRust ?? RustLib.init,
-  debugHello: debugHello ?? bridgeHello,
-  createCapabilities: createCapabilities ?? createDefaultPlatformCapabilities,
-  runApplication: runApplication ?? runApp,
-);
+}) {
+  final widgetChannel = ScheduleWidgetChannel();
+  return bootstrapUbaaHost(
+    ensureFlutterInitialized:
+        ensureInitialized ?? WidgetsFlutterBinding.ensureInitialized,
+    initializePlatformChannels: widgetChannel.initialize,
+    initializeSdk: initializeRust ?? RustLib.init,
+    debugHello: debugHello ?? bridgeHello,
+    createCapabilities: createCapabilities ?? createDefaultPlatformCapabilities,
+    runApplication: runApplication ?? runApp,
+    syncScheduleWidget: widgetChannel.sync,
+    offlineScheduleTarget: widgetChannel.target,
+  );
+}

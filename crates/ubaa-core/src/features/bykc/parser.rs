@@ -2,6 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 
 use chrono::{Local, NaiveDateTime};
+use scraper::Html;
 use serde_json::{Map, Value};
 
 use super::error;
@@ -49,6 +50,39 @@ fn int(map: &Map<String, Value>, key: &str) -> Option<i32> {
         })
 }
 
+fn nested_string(map: &Map<String, Value>, key: &str, nested_key: &str) -> Option<String> {
+    map.get(key)
+        .and_then(Value::as_object)
+        .and_then(|nested| string(nested, nested_key))
+}
+
+fn string_list(map: &Map<String, Value>, key: &str) -> Vec<String> {
+    map.get(key)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn plain_text(value: Option<String>) -> Option<String> {
+    let value = value?;
+    let text = Html::parse_fragment(&value)
+        .root_element()
+        .text()
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    (!text.is_empty()).then_some(text)
+}
+
 fn course(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
     let m = value.as_object().ok_or_else(|| error("博雅课程字段无效"))?;
     let id = m
@@ -87,6 +121,16 @@ fn course(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
         course_name: string(m, "courseName").ok_or_else(|| error("博雅课程缺少名称"))?,
         course_position: string(m, "coursePosition"),
         course_teacher: string(m, "courseTeacher"),
+        organizer_college_name: nested_string(m, "courseBelongCollege", "collegeName"),
+        category_name: nested_string(m, "courseNewKind1", "kindName"),
+        sub_category_name: nested_string(m, "courseNewKind2", "kindName"),
+        course_contact: string(m, "courseContact"),
+        course_contact_mobile: string(m, "courseContactMobile"),
+        course_desc: plain_text(string(m, "courseDesc")),
+        audience_campuses: string_list(m, "courseCampusList"),
+        audience_colleges: string_list(m, "courseCollegeList"),
+        audience_terms: string_list(m, "courseTermList"),
+        audience_groups: string_list(m, "courseGroupList"),
         course_start_date,
         course_end_date: string(m, "courseEndDate"),
         course_select_start_date,
@@ -94,6 +138,7 @@ fn course(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
         course_cancel_end_date: string(m, "courseCancelEndDate"),
         course_max_count,
         course_current_count,
+        course_sign_type: int(m, "courseSignType"),
         status,
         selected,
         select_eligibility,
@@ -131,7 +176,7 @@ fn course_status(
         BykcCourseStatus::Ended
     } else if current_count
         .zip(max_count)
-        .is_some_and(|(current, max)| current >= max)
+        .is_some_and(|(current, max)| max > 0 && current >= max)
     {
         BykcCourseStatus::Full
     } else if parse_datetime(select_start).is_some_and(|value| now < value) {
@@ -158,19 +203,20 @@ fn select_eligibility(
     let Some(selected) = selected else {
         return ActionEligibility::Unknown;
     };
-    let (Some(current_count), Some(max_count)) = (current_count, max_count) else {
+    let Some(max_count) = max_count else {
         return ActionEligibility::Unknown;
     };
-    let (Some(select_start), Some(select_end)) =
-        (parse_datetime(select_start), parse_datetime(select_end))
-    else {
+    // 旧版详情允许空当前人数和空选课窗口；有值但无法解析仍拒绝。
+    if select_start.is_some_and(|v| parse_datetime(Some(v)).is_none())
+        || select_end.is_some_and(|v| parse_datetime(Some(v)).is_none())
+    {
         return ActionEligibility::Unknown;
-    };
+    }
 
     if selected
-        || (max_count > 0 && current_count >= max_count)
-        || now < select_start
-        || now > select_end
+        || (max_count > 0 && current_count.is_some_and(|n| n >= max_count))
+        || parse_datetime(select_start).is_some_and(|start| now < start)
+        || parse_datetime(select_end).is_some_and(|end| now > end)
         || status != BykcCourseStatus::Available
     {
         ActionEligibility::Denied
@@ -262,7 +308,7 @@ pub(super) fn parse_courses_at(
 
 /// 解析课程详情。
 pub(crate) fn parse_course_detail(body: &str) -> Result<BykcCourse> {
-    course(&envelope(body)?, Local::now().naive_local())
+    course_detail(&envelope(body)?, Local::now().naive_local())
 }
 
 pub(super) fn parse_course_detail_for_write(body: &str) -> Result<BykcCourse> {
@@ -272,7 +318,40 @@ pub(super) fn parse_course_detail_for_write(body: &str) -> Result<BykcCourse> {
         .ok_or_else(|| error("博雅课程详情结构无效"))?;
     ensure_optional_i32(map, "courseCurrentCount")?;
     ensure_optional_i32(map, "courseMaxCount")?;
-    course(&value, Local::now().naive_local())
+    course_detail(&value, Local::now().naive_local())
+}
+
+fn course_detail(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
+    let mut result = course(value, now)?;
+    if result.selected.is_none() {
+        result.selected = Some(false);
+        result.status = course_status(
+            result.course_start_date.as_deref(),
+            result.course_select_start_date.as_deref(),
+            result.course_select_end_date.as_deref(),
+            result.selected,
+            result.course_current_count,
+            result.course_max_count,
+            now,
+        );
+        result.select_eligibility = select_eligibility(
+            result.course_start_date.as_deref(),
+            result.course_select_start_date.as_deref(),
+            result.course_select_end_date.as_deref(),
+            result.selected,
+            result.course_current_count,
+            result.course_max_count,
+            result.status,
+            now,
+        );
+        result.deselect_eligibility = deselect_eligibility(
+            result.id,
+            result.selected,
+            result.course_start_date.as_deref(),
+            now,
+        );
+    }
+    Ok(result)
 }
 
 /// 解析已选课程列表。
@@ -549,7 +628,7 @@ pub(crate) fn parse_statistics(body: &str) -> Result<BykcStatistics> {
         .as_object()
         .cloned()
         .ok_or_else(|| error("博雅统计结构无效"))?;
-    let categories = m
+    let mut categories: Vec<BykcStatistic> = m
         .get("categories")
         .or_else(|| m.get("list"))
         .and_then(Value::as_array)
@@ -564,8 +643,40 @@ pub(crate) fn parse_statistics(body: &str) -> Result<BykcStatistics> {
             qualified: v.get("isQualified").and_then(Value::as_bool),
         })
         .collect();
+    if categories.is_empty() {
+        if let Some(statistical) = m.get("statistical").and_then(Value::as_object) {
+            for (category_key, sub_categories) in statistical {
+                let Some(sub_categories) = sub_categories.as_object() else {
+                    continue;
+                };
+                for (sub_category_key, entry) in sub_categories {
+                    let Some(entry) = entry.as_object() else {
+                        continue;
+                    };
+                    let required_count = int(entry, "assessmentCount");
+                    let passed_count = int(entry, "completeAssessmentCount");
+                    categories.push(BykcStatistic {
+                        category_name: Some(statistic_name(category_key)),
+                        sub_category_name: Some(statistic_name(sub_category_key)),
+                        required_count,
+                        passed_count,
+                        qualified: required_count
+                            .zip(passed_count)
+                            .map(|(required, passed)| passed >= required),
+                    });
+                }
+            }
+        }
+    }
     Ok(BykcStatistics {
-        total_valid_count: int(&m, "totalValidCount"),
+        total_valid_count: int(&m, "totalValidCount").or_else(|| int(&m, "validCount")),
         categories,
     })
+}
+
+fn statistic_name(value: &str) -> String {
+    value
+        .rsplit_once('|')
+        .map_or(value, |(_, name)| name)
+        .to_owned()
 }

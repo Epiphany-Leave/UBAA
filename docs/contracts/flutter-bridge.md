@@ -1,5 +1,9 @@
 # Flutter Bridge 合同
 
+当前 `contract_version()` 返回 `u32=12`。
+
+当前 v12 在既有研究生学业读取与 Core 统计投影上，增加研讨室门锁密码的显式 typed 展示字段（lockCode、dueDate、room、reservationTime）。普通 CLI 序列化及 Rust Debug 不输出密码；不传递原始响应，不增加磁盘缓存。平台预约写入仍须用户验证，不能沿用下述历史通过证据。
+
 状态：合同 v9 的 Phase 11J typed 实现已在 `4b0dcb0` 完成本地确定性门禁、FRB 零漂移与脱敏宿主
 integration；Phase 11K `b6ff2c7` 完成 Dart 单一写入协调器与共享宿主接线，保持合同 v9。
 此前 P1 证据只作历史基线，实体设备上的原生 isolate/内存观测仍是后置发布证据。
@@ -11,7 +15,7 @@ Session 内容、业务 token、签名、验证码材料、原始 HTML/JSON 和�
 
 ## 1. 版本与命名
 
-- 合同版本为 `9`；FRB、runtime、codegen 和 Cargokit 固定为 `2.13.0`。历史版本 3 将课堂签到
+- 合同版本为 `12`；FRB、runtime、codegen 和 Cargokit 固定为 `2.13.0`。历史版本 3 将课堂签到
   `signStatus` 改为可空并新增 typed eligibility/target；版本 4 又将 LibBook 座位 `status` 改为
   可空整数，以 typed `reserveEligibility/reserveTarget` 取代 `isAvailable`。版本 5 将 LibBook booking
   `status` 改为可空整数并新增 typed `cancelEligibility/cancelTarget`，同时让取消请求携带本地
@@ -22,7 +26,7 @@ Session 内容、业务 token、签名、验证码材料、原始 HTML/JSON 和�
   `submitEligibility/submitTarget`，将提交请求收紧为完整 typed target、canonical 时间和必需照片，并新增
   caller-pinned 的概览/记录回读与安全提交收据。版本 9 为 Evaluation 增加 typed
   `submitEligibility/submitTarget`、只含 targets 的批量请求、四态逐项结果与 caller-pinned 原路线回读。
-  版本 9 不与版本 8 或更早的生成绑定混用。
+  版本 10 增加 GSMIS 成绩概览、独立考试学期和节次时间；不得与版本 9 或更早的生成绑定混用。
 - Rust 类型使用 `Bridge` 前缀，Dart 生成类型去除 Rust module 路径并使用 `camelCase` 字段。
 - `BridgeClient` 是 opaque handle。Dart 不能读取其内部 Core client、配置目录、Session、
   请求、路线 runtime 或待提交请求。
@@ -38,7 +42,9 @@ Session 内容、业务 token、签名、验证码材料、原始 HTML/JSON 和�
 |---|---|---|---|
 | `BridgeClient.open` | `configDir: String` | opaque `BridgeClient` | 只接受绝对应用私有目录；调用 `UbaaClient::open`；不返回或扫描目录内容 |
 | `dispose` | 无 | `void` | 幂等；使全部 intent 失效；等待当前持锁操作结束后销毁 Core client |
-| `contractVersion` | 无 | `u32=9` | sync、无 I/O；宿主必须与同一次 codegen 产物配套 |
+| `contractVersion` | 无 | `u32=12` | sync、无 I/O；宿主必须与同一次 codegen 产物配套 |
+| `savedSchedule` | 无 | `BridgeSavedSchedule` | 只读当前账号的本地整学期课表；不联网，注销后为空 |
+| `updateSavedSchedule` | 可选 `term` | `BridgeSavedSchedule` | 用户主动更新；验证完整学期后替换缓存，失败保留旧课表 |
 
 同一 client 的 Core 调用串行持有一个异步互斥锁；读操作可以在 Dart 侧取消等待，但已经进入
 Core 的调用不会被透明重放。dispose 后所有方法返回 `client_disposed`。isolate 重建必须重新
@@ -87,7 +93,8 @@ Flutter 宿主必须继续保留这里定义的 code、kind、retryable 和 reso
 
 Core 错误码逐一映射：`invalid_input`、`authentication_required`、`invalid_credentials`、
 `password_risk_confirmation_failed`、`permission_denied`、`network_error`、`timeout`、
-`upstream_unavailable`、`outcome_unknown`、`upstream_changed`、`parse_error`、`internal_error`。
+`upstream_unavailable`、`outcome_unknown`、`upstream_changed`、`parse_error`、`internal_error`、`unsupported`。
+研究生非空考试明细尚未适配时返回 `unsupported`（upstream、不可重试），UI 显示“暂不支持”，不得误报为接口变化。
 博雅签到、课堂签到、LibBook 预约/取消、Cgyy 预约/取消、Ygdk 与 Evaluation 提交合同都只允许在非幂等写请求越过
 发送边界后产生 `outcome_unknown`；其余写操作暂时保留既有的 commit 阶段保守映射，可能把业务登录或
 预检中的网络类失败也归入结果未知，必须在后续来源对照阶段逐项收窄。LibBook 的 `outcome_unknown`
@@ -136,6 +143,8 @@ final 发送后无法确定结果才进入不可重试的 `outcome_unknown`。�
 | `scheduleToday` | 无 | `List<TodayClass>` |
 | `examArrangement` | `term: String` | `ExamArrangement` |
 | `grades` | `term: String` | `GradeData` |
+| `examTerms` | 无 | `Vec<Term>`，考试应用独立学期 |
+| `gradeOverview` | 无 | `GradeOverview`，研究生全量成绩与 Core 统计；本科 `graduate=false` |
 | `classroomSearch` | `campus: i32, date: String` | `ClassroomQuery` |
 | `spocAssignments` | 无 | `SpocAssignments` |
 | `spocAssignment` | `assignmentId: String` | `SpocAssignmentDetail` |
@@ -172,7 +181,10 @@ DTO 字段保持与 facade 稳定类型一一对应，但只允许以下字段�
 - `CourseClass {courseCode,courseName,courseSerialNo?,credit?,beginTime?,endTime?,beginSection?,endSection?,placeName?,weeksAndTeachers?,teachingTarget?,color?,dayOfWeek?}`；
   `WeeklySchedule {arrangedList,code,name}`；`TodayClass {bizName,place?,time?,shortName?}`。
 - `ExamArrangement {arranged,notArranged}`；`Exam {courseName,courseNo?,examTimeDescription?,examDate?,startTime?,endTime?,examPlace?,examSeatNo?,week?,examStatus?,examType?,taskId?}`。
-- `GradeData {termCode,grades}`；`Grade {courseName?,courseCode?,credit?,score?,gradePoint?,courseType?,scoreType?,termCode?}`。
+- `GradeData {termCode,grades}`；`Grade {graduate,termName?,averageScore?,courseName?,courseCode?,credit?,score?,gradePoint?,courseType?,scoreType?,termCode?}`。
+- `GradeOverview {graduate,grades,statistics?,terms}`；`GradeStatistics {gpa?,averageScore?,gpaCredits,averageCredits}`；每个 `GradeTermStatistics` 含 `termCode,termName,statistics`。统计由 Core 计算，空分母返回 null；宿主不套用本科公式。
+- `WeeklySchedule.sectionTimes` 提供完整有效节次的 `section,startTime,endTime`，不依赖该节有课。
+- 默认考试从 `examTerms` 选择学期。成绩未指定学期时先读取 `gradeOverview`：研究生直接展示全量与历史学期统计；本科沿用课表学期加 `grades(term)`。显式成绩学期仍使用 `grades(term)`。
 - `ClassroomQuery {code,message,floors}`；`floors` 在 bridge 中编码为
   `List<ClassroomFloor {name,rooms}>`，避免跨语言 map 顺序差异；
   `ClassroomInfo {id,floorId,name,availableSections}`。

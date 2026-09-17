@@ -48,7 +48,10 @@ void registerBridgeBackendReductionCharacterization() {
             !_successDespiteEmpty.contains(_featureViewKey(feature, view)),
             reason: '${feature.name}/${view.name}',
           );
-          expect(result.resolvedRoute, ConnectionMode.webvpn);
+          expect(
+            result.resolvedRoute,
+            feature == FeatureId.schedule ? null : ConnectionMode.webvpn,
+          );
         } on BackendException catch (error) {
           expect(supported, isFalse, reason: '${feature.name}/${view.name}');
           expect(error.code, UbaaErrorCode.invalidInput);
@@ -65,8 +68,8 @@ void registerBridgeBackendReductionCharacterization() {
       client.calls.where(
         (call) => call == 'scheduleWeek:term=2026-fall,week=4',
       ),
-      hasLength(2),
-      reason: 'summary(term+week) 与 scheduleWeek 都走周课表',
+      isEmpty,
+      reason: '无可选学期时周课表不继续请求课程',
     );
 
     client.calls.clear();
@@ -74,7 +77,7 @@ void registerBridgeBackendReductionCharacterization() {
       FeatureId.schedule,
       const FeatureQuery(),
     );
-    expect(client.calls, <String>['scheduleToday']);
+    expect(client.calls, <String>['savedSchedule']);
     expect(plainSummary.isEmpty, isTrue);
   });
 }

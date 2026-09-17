@@ -61,6 +61,13 @@ pub struct BridgeWeeklySchedule {
     pub arranged_list: Vec<BridgeCourseClass>,
     pub code: String,
     pub name: String,
+    pub section_times: Vec<BridgeSectionTime>,
+}
+#[derive(Clone, Debug)]
+pub struct BridgeSectionTime {
+    pub section: i32,
+    pub start_time: String,
+    pub end_time: String,
 }
 #[derive(Clone, Debug)]
 pub struct BridgeTodayClass {
@@ -91,6 +98,9 @@ pub struct BridgeExamArrangement {
 }
 #[derive(Clone, Debug)]
 pub struct BridgeGrade {
+    pub graduate: bool,
+    pub term_name: Option<String>,
+    pub average_score: Option<f64>,
     pub course_name: Option<String>,
     pub course_code: Option<String>,
     pub credit: Option<f64>,
@@ -105,6 +115,27 @@ pub struct BridgeGradeData {
     pub term_code: String,
     pub grades: Vec<BridgeGrade>,
 }
+#[derive(Clone, Debug)]
+pub struct BridgeGradeStatistics {
+    pub gpa: Option<f64>,
+    pub average_score: Option<f64>,
+    pub gpa_credits: f64,
+    pub average_credits: f64,
+}
+#[derive(Clone, Debug)]
+pub struct BridgeGradeTermStatistics {
+    pub term_code: String,
+    pub term_name: String,
+    pub statistics: BridgeGradeStatistics,
+}
+#[derive(Clone, Debug)]
+pub struct BridgeGradeOverview {
+    pub graduate: bool,
+    pub grades: Vec<BridgeGrade>,
+    pub statistics: Option<BridgeGradeStatistics>,
+    pub terms: Vec<BridgeGradeTermStatistics>,
+}
+routed!(BridgeRoutedGradeOverview, BridgeGradeOverview);
 #[derive(Clone, Debug)]
 pub struct BridgeClassroomInfo {
     pub id: String,
@@ -257,6 +288,16 @@ pub struct BridgeBykcCourse {
     pub course_name: String,
     pub course_position: Option<String>,
     pub course_teacher: Option<String>,
+    pub organizer_college_name: Option<String>,
+    pub category_name: Option<String>,
+    pub sub_category_name: Option<String>,
+    pub course_contact: Option<String>,
+    pub course_contact_mobile: Option<String>,
+    pub course_desc: Option<String>,
+    pub audience_campuses: Vec<String>,
+    pub audience_colleges: Vec<String>,
+    pub audience_terms: Vec<String>,
+    pub audience_groups: Vec<String>,
     pub course_start_date: Option<String>,
     pub course_end_date: Option<String>,
     pub course_select_start_date: Option<String>,
@@ -264,6 +305,7 @@ pub struct BridgeBykcCourse {
     pub course_cancel_end_date: Option<String>,
     pub course_max_count: Option<i32>,
     pub course_current_count: Option<i32>,
+    pub course_sign_type: Option<i32>,
     pub status: BridgeBykcCourseStatus,
     pub selected: Option<bool>,
     pub select_eligibility: BridgeActionEligibility,
@@ -597,9 +639,21 @@ pub struct BridgeCallerPinnedCgyyOrder {
     pub data: BridgeCgyyOrder,
     pub pinned_route: super::client::BridgeConnectionMode,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BridgeCgyyLockCode {
     pub available: bool,
+    pub lock_code: Option<String>,
+    pub due_date: Option<String>,
+    pub room: Option<String>,
+    pub reservation_time: Option<String>,
+}
+
+impl std::fmt::Debug for BridgeCgyyLockCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BridgeCgyyLockCode")
+            .field("available", &self.available)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -680,3 +734,16 @@ routed!(BridgeRoutedEvaluation, BridgeEvaluationCoursesResponse);
 
 #[cfg(test)]
 mod tests;
+#[derive(Clone, Debug)]
+pub struct BridgeSavedSchedule {
+    pub terms: Vec<BridgeTerm>,
+    pub semesters: Vec<BridgeSavedSemester>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BridgeSavedSemester {
+    pub term: String,
+    pub weeks: Vec<BridgeWeek>,
+    pub schedules: Vec<BridgeWeeklySchedule>,
+    pub updated_at: String,
+}

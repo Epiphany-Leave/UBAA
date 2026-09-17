@@ -301,6 +301,7 @@ void registerBridgeBackendWriteAndErrorCharacterization() {
       BridgeErrorCode.upstreamUnavailable: UbaaErrorCode.upstreamUnavailable,
       BridgeErrorCode.upstreamChanged: UbaaErrorCode.upstreamChanged,
       BridgeErrorCode.parseError: UbaaErrorCode.parseError,
+      BridgeErrorCode.unsupported: UbaaErrorCode.unsupported,
       BridgeErrorCode.internalError: UbaaErrorCode.internalError,
       BridgeErrorCode.clientDisposed: UbaaErrorCode.internalError,
       BridgeErrorCode.confirmationRequired: UbaaErrorCode.confirmationRequired,

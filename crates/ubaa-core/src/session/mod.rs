@@ -5,6 +5,7 @@ mod coordinator;
 mod file_safety;
 mod file_store;
 mod ports;
+pub(crate) mod schedule_cache;
 mod storage;
 mod types;
 

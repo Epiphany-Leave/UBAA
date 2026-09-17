@@ -15,6 +15,8 @@ dependencies:
     path: ../../packages/ubaa_host
   ubaa_platform:
     path: ../../packages/ubaa_platform
+  ubaa_domain:
+    path: ../../packages/ubaa_domain
 
 dev_dependencies:
   flutter_test:
@@ -24,8 +26,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   ubaa_app:
     path: ../../packages/ubaa_app
-  ubaa_domain:
-    path: ../../packages/ubaa_domain
   ubaa_ui:
     path: ../../packages/ubaa_ui
 

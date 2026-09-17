@@ -47,10 +47,10 @@ void _registerFeatureRenderingTests() {
     await tester.pumpAndSettle();
     expect(find.text('高等数学'), findsOneWidget);
     expect(find.text('主楼 101'), findsOneWidget);
-    expect(find.text('实际路线：直连'), findsOneWidget);
+    expect(find.text('实际路线：直连'), findsNothing);
     expect(find.textContaining('只读详情页面将在'), findsNothing);
 
-    await tester.tap(find.text('返回功能列表'));
+    await tester.tap(find.byTooltip('返回'));
     await tester.tap(find.byIcon(Icons.person_outline));
     await tester.pumpAndSettle();
     expect(find.text('直连'), findsOneWidget);
@@ -160,7 +160,7 @@ void _registerFeatureInputTests() {
             return WriteIntent(
               intentId: 'cgyy-reserve-1',
               operation: WriteOperation.cgyySubmitReservation,
-              targetSummary: '提交场馆预约',
+              targetSummary: '提交研讨室预约',
               resolvedRoute: ConnectionMode.direct,
               warnings: const <String>['如需验证码，材料只在本次操作内使用'],
               expiresAt: DateTime.now().add(const Duration(minutes: 2)),
@@ -173,7 +173,7 @@ void _registerFeatureInputTests() {
             return const WriteCommitResult(
               operation: WriteOperation.cgyySubmitReservation,
               success: true,
-              message: '场馆预约结果已提交，请刷新订单确认',
+              message: '研讨室预约结果已提交，请刷新订单确认',
               outcomeUnknown: false,
               cgyyReceipt: CgyyReservationReceipt(
                 orderId: 42,
@@ -196,9 +196,9 @@ void _registerFeatureInputTests() {
     );
     await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('场馆预约'));
+    await tester.tap(find.text('研讨室预约'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('准备场馆预约').first);
+    await tester.tap(find.text('准备研讨室预约').first);
     await tester.pumpAndSettle();
     expect(find.text('选择预约时段（已选 1 个）'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, '空间 5 · 时段 7'), findsNothing);
@@ -215,11 +215,11 @@ void _registerFeatureInputTests() {
     await tester.pumpAndSettle();
     expect(prepareCalls, 1);
     expect(commitCalls, 0);
-    expect(find.text('确认场馆预约'), findsNWidgets(2));
+    expect(find.text('确认研讨室预约'), findsNWidgets(2));
     await tester.tap(find.text('确认提交'));
     await tester.pumpAndSettle();
     expect(commitCalls, 1);
-    expect(find.text('场馆预约结果已提交，请刷新订单确认（订单编号 42，订单列表已核对）'), findsOneWidget);
+    expect(find.text('研讨室预约结果已提交，请刷新订单确认（订单编号 42，订单列表已核对）'), findsOneWidget);
   });
 
   testWidgets('阳光打卡填写时间并选择内存照片后才进入确认页', (tester) async {
@@ -495,7 +495,7 @@ void _registerFeatureInputTests() {
         ),
       ),
     );
-    await tester.tap(find.byIcon(Icons.apps_outlined));
+    await tester.tap(find.text('普通功能').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('图书馆座位'));
     await tester.tap(find.text('图书馆座位'));

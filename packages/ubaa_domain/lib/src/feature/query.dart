@@ -85,6 +85,7 @@ class FeatureQuery {
     this.courseId,
     this.judgeKeys = const <JudgeAssignmentQueryKey>[],
     this.includeExpired = false,
+    this.updateSchedule = false,
   });
 
   final String? term;
@@ -119,6 +120,7 @@ class FeatureQuery {
   /// Judge 批量详情的公开键，顺序会传递给 Core 并保持在结果中。
   final List<JudgeAssignmentQueryKey> judgeKeys;
   final bool includeExpired;
+  final bool updateSchedule;
 
   FeatureQuery copyWith({
     String? term,
@@ -142,6 +144,7 @@ class FeatureQuery {
     String? courseId,
     List<JudgeAssignmentQueryKey>? judgeKeys,
     bool? includeExpired,
+    bool? updateSchedule,
   }) => FeatureQuery(
     term: term ?? this.term,
     date: date ?? this.date,
@@ -164,5 +167,6 @@ class FeatureQuery {
     courseId: courseId ?? this.courseId,
     judgeKeys: judgeKeys ?? this.judgeKeys,
     includeExpired: includeExpired ?? this.includeExpired,
+    updateSchedule: updateSchedule ?? this.updateSchedule,
   );
 }

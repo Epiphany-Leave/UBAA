@@ -1,6 +1,145 @@
 part of '../bridge_backend_characterization_test.dart';
 
 void registerBridgeBackendReadCharacterization() {
+  test('阳光摘要展示官方学期及本周统计且不虚构缺失目标', () async {
+    for (final weekly in [false, true]) {
+      final client = _CharacterizationBridgeClient(
+        ygdkOverviewFixture: BridgeYgdkOverview(
+          summary: BridgeYgdkTermSummary(
+            termCount: 3,
+            termTarget: weekly ? 10 : null,
+            weekCount: weekly ? 1 : null,
+            weekTarget: weekly ? 3 : null,
+          ),
+          classifyId: 31,
+          classifyName: '测试分类',
+          defaultItemId: 13,
+          defaultItemName: '跑步',
+          items: [],
+        ),
+      );
+      final result = await BridgeBackend(
+        client,
+      ).loadFeatureQuery(FeatureId.ygdk, const FeatureQuery());
+      expect(
+        result.summary,
+        weekly ? '本学期认定次数 3 / 10\n本周打卡 1 / 3' : '本学期认定次数 3 次',
+      );
+    }
+  });
+  test('周课表无需手填学期周次，使用当前选项并携带导航', () async {
+    final client = _CharacterizationBridgeClient();
+    final result = await BridgeBackend(client).loadFeatureQuery(
+      FeatureId.schedule,
+      const FeatureQuery(view: FeatureQueryView.scheduleWeek),
+    );
+    expect(result.timetable?.semesters.single.term, '2026-fall');
+    expect(result.timetable?.semesters.single.weeks.single.number, 4);
+    expect(client.calls, ['savedSchedule']);
+  });
+  test('研究生全量成绩和空成绩均不依赖课表学期，统计直接来自 Core', () async {
+    for (final empty in <bool>[false, true]) {
+      final client = _CharacterizationBridgeClient(
+        gradeOverviewFixture: BridgeGradeOverview(
+          graduate: true,
+          grades: empty
+              ? const <BridgeGrade>[]
+              : const <BridgeGrade>[
+                  BridgeGrade(
+                    graduate: true,
+                    courseName: '历史课程',
+                    score: '90',
+                    termName: '历史学期',
+                  ),
+                ],
+          statistics: empty
+              ? const BridgeGradeStatistics(gpaCredits: 0, averageCredits: 0)
+              : const BridgeGradeStatistics(
+                  gpa: 3.125,
+                  averageScore: 88.5,
+                  gpaCredits: 2,
+                  averageCredits: 3,
+                ),
+          terms: const <BridgeGradeTermStatistics>[],
+        ),
+      );
+      final result = await BridgeBackend(
+        client,
+      ).loadFeatureQuery(FeatureId.grades, const FeatureQuery());
+      expect(client.calls, <String>['gradeOverview']);
+      expect(result.isEmpty, isFalse);
+      expect(result.details.first.title, '研究生成绩统计');
+      if (empty) {
+        expect(result.details.first.fields.first.value, '暂无可计算成绩');
+        expect(result.details.first.fields[2].value, '0.0');
+      }
+      expect(result.resolvedRoute, ConnectionMode.webvpn);
+      if (!empty) {
+        expect(result.details.first.fields.first.value, '3.125');
+        expect(
+          result.details.last.fields.any((field) => field.value == '历史学期'),
+          isTrue,
+        );
+      }
+    }
+  });
+
+  test('考试默认学期使用考试入口，本科成绩保留原学期路径', () async {
+    final client = _CharacterizationBridgeClient();
+    final backend = BridgeBackend(client);
+    await backend.loadFeatureQuery(FeatureId.exam, const FeatureQuery());
+    expect(client.calls, <String>[
+      'examTerms',
+      'examArrangement:term=2026-fall',
+    ]);
+    client.calls.clear();
+    await backend.loadFeatureQuery(FeatureId.grades, const FeatureQuery());
+    expect(client.calls, <String>[
+      'gradeOverview',
+      'scheduleTerms',
+      'grades:term=2026-fall',
+    ]);
+  });
+  test('考试和研究生成绩保留专用展示字段', () async {
+    final exam = await BridgeBackend(
+      _CharacterizationBridgeClient(),
+    ).loadFeatureQuery(FeatureId.exam, const FeatureQuery());
+    expect(
+      exam.details.single.fields
+          .singleWhere((field) => field.label == '安排状态')
+          .value,
+      '已安排',
+    );
+
+    final grades = await BridgeBackend(
+      _CharacterizationBridgeClient(
+        gradeOverviewFixture: const BridgeGradeOverview(
+          graduate: true,
+          grades: <BridgeGrade>[
+            BridgeGrade(
+              graduate: true,
+              courseName: '研究生课程',
+              score: '90',
+              scoreType: '0',
+              averageScore: 90,
+            ),
+          ],
+          terms: <BridgeGradeTermStatistics>[],
+        ),
+      ),
+    ).loadFeatureQuery(FeatureId.grades, const FeatureQuery());
+    final course = grades.details.singleWhere(
+      (detail) => detail.title == '研究生课程',
+    );
+    expect(
+      course.fields.singleWhere((field) => field.label == '折算分').value,
+      '90.00',
+    );
+    expect(
+      course.fields.singleWhere((field) => field.label == '成绩制').value,
+      '0',
+    );
+  });
   test('阳光打卡 Dart 投影对重复和不一致 typed 目标逐项 fail-closed', () async {
     final client = _CharacterizationBridgeClient(
       ygdkOverviewFixture: const BridgeYgdkOverview(
@@ -286,6 +425,20 @@ void registerBridgeBackendReadCharacterization() {
     expect(detailDeselectAction?.courseId, 42);
     expect(detailDeselectAction?.eligibility, ActionEligibility.allowed);
     expect(detail.details.single.actions.whereType<BykcSignAction>(), isEmpty);
+    expect(
+      detail.details.single.fields.map((field) => field.label),
+      containsAll(<String>[
+        '开课单位',
+        '课程分类',
+        '适用校区',
+        '适用学院',
+        '适用年级',
+        '适用人群',
+        '联系人',
+        '联系电话',
+        '课程简介',
+      ]),
+    );
 
     final chosenAction = chosen.details.single.action<BykcDeselectAction>();
     expect(chosenAction?.courseId, 9527);
@@ -604,10 +757,10 @@ void registerBridgeBackendReadCharacterization() {
       'libbookBookings:page=2,limit=1',
       'libbookLibraries:day=2026-09-04',
       'libbookSeats:areaId=area-1,day=2026-09-04,startTime=08:00,endTime=10:00',
-      'scheduleTerms',
-      'scheduleToday',
-      'scheduleWeek:term=2026-fall,week=4',
-      'scheduleWeeks:term=2026-fall',
+      'savedSchedule',
+      'savedSchedule',
+      'savedSchedule',
+      'savedSchedule',
       'signinToday',
       'spocAssignment:assignmentId=spoc-1',
       'spocAssignments',
@@ -617,7 +770,7 @@ void registerBridgeBackendReadCharacterization() {
     expect(results, hasLength(32));
     expect(
       results.map((result) => result.resolvedRoute).toSet(),
-      <ConnectionMode?>{ConnectionMode.webvpn},
+      <ConnectionMode?>{ConnectionMode.webvpn, null},
     );
     final cgyyDetailAction = cgyyDetail.details.single
         .action<CgyyCancelAction>();
@@ -643,7 +796,7 @@ void registerBridgeBackendReadCharacterization() {
       '学号|student-placeholder',
       '要求数量|2',
       '空间组 ID|10',
-      '门锁状态',
+      '暂无可用门锁密码',
       '订单编号|9',
       '订单编号|101',
       '用途编号|2',
@@ -660,10 +813,10 @@ void registerBridgeBackendReadCharacterization() {
       '预约 ID|booking-read-1',
       '馆 ID|library-read-1',
       '座位 ID|seat-read-1',
-      '学期编码|2026-fall',
-      '地点|主楼 101',
-      '地点|主楼 102',
-      '周次|4',
+      '今日课程',
+      '今日课程',
+      '今日课程',
+      '今日课程',
       '课程 ID|signin-read-1',
       '作业编号|spoc-1',
       '课程编号|course-spoc-1',
@@ -720,4 +873,53 @@ void registerBridgeBackendReadCharacterization() {
     expect(profileText, isNot(contains('employee-secret')));
     expect(sitesText, isNot(contains('telephone-secret')));
   });
+}
+
+BridgeSavedSchedule _savedScheduleFixture() {
+  final now = DateTime.now();
+  final monday = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(Duration(days: now.weekday - 1));
+  return BridgeSavedSchedule(
+    terms: const [
+      BridgeTerm(
+        itemIndex: 1,
+        itemCode: '2026-fall',
+        itemName: '秋季',
+        selected: true,
+      ),
+    ],
+    semesters: [
+      BridgeSavedSemester(
+        term: '2026-fall',
+        updatedAt: now.toIso8601String(),
+        weeks: [
+          BridgeWeek(
+            startDate: monday.toIso8601String(),
+            endDate: monday.add(const Duration(days: 6)).toIso8601String(),
+            term: '2026-fall',
+            curWeek: false,
+            serialNumber: 4,
+            name: '第 4 周',
+          ),
+        ],
+        schedules: [
+          BridgeWeeklySchedule(
+            code: '4',
+            name: '第 4 周',
+            sectionTimes: [],
+            arrangedList: [
+              BridgeCourseClass(
+                courseName: '今日课程',
+                courseCode: 'course-1',
+                dayOfWeek: now.weekday,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
 }

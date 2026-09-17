@@ -68,9 +68,8 @@ void _registerResponsiveAccessibilityTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('课表查询').first);
     await tester.pumpAndSettle();
-    expect(find.text('返回功能列表'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    final back = find.widgetWithText(OutlinedButton, '返回功能列表');
+    final back = find.byTooltip('返回');
     expect(back, findsOneWidget);
     await tester.tap(back);
     await tester.pumpAndSettle();

@@ -1,5 +1,21 @@
 part of '../widgets.dart';
 
+enum _FeatureSubpage {
+  libbookReserve('预约座位'),
+  libbookBookings('我的预约'),
+  bykcCourses('选择课程'),
+  bykcCourseDetail('课程详情'),
+  bykcChosen('我的课程'),
+  bykcStatistics('课程统计'),
+  cgyyReserve('预约研讨室'),
+  cgyyOrders('我的预约'),
+  cgyyOrderDetail('预约详情'),
+  cgyyLockCode('查看密码');
+
+  const _FeatureSubpage(this.title);
+  final String title;
+}
+
 /// 主界面容器：窄屏使用底部导航，桌面宽屏使用侧边导航。
 class UbaaMainShell extends StatefulWidget {
   const UbaaMainShell({
@@ -16,6 +32,12 @@ class UbaaMainShell extends StatefulWidget {
     this.initialTab = 0,
     this.activeRoutes = const <ConnectionMode>[],
     this.onReadDiagnostics,
+    this.onLoadAppVersion,
+    this.onOpenProject,
+    this.gradeChangeCount = 0,
+    this.onDismissGradeChanges,
+    this.onLoadYgdkReminder,
+    this.onSaveYgdkReminder,
     this.writeState = const WriteState.idle(),
     this.onRunWritePrepare,
     this.onCancelWrite,
@@ -58,6 +80,12 @@ class UbaaMainShell extends StatefulWidget {
 
   /// 宿主提供本轮允许字段的脱敏报告，不读取账号或业务数据。
   final String Function()? onReadDiagnostics;
+  final Future<String?> Function()? onLoadAppVersion;
+  final Future<bool> Function()? onOpenProject;
+  final int gradeChangeCount;
+  final VoidCallback? onDismissGradeChanges;
+  final Future<bool> Function()? onLoadYgdkReminder;
+  final Future<void> Function(bool)? onSaveYgdkReminder;
   final WriteState writeState;
   final WritePreparationRunner? onRunWritePrepare;
   final WriteCancellationRunner? onCancelWrite;
@@ -93,6 +121,7 @@ class UbaaMainShell extends StatefulWidget {
 class _UbaaMainShellState extends State<UbaaMainShell> {
   late int _selectedIndex;
   FeatureId? _openedFeature;
+  _FeatureSubpage? _openedSubpage;
   final Map<FeatureId, FeatureQuery> _featureQueries =
       <FeatureId, FeatureQuery>{};
 
@@ -145,7 +174,9 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
             feature: _openedFeature!,
             snapshot: widget.snapshots[_openedFeature!]!,
             query: _featureQueries[_openedFeature!] ?? const FeatureQuery(),
-            onBack: () => setState(() => _openedFeature = null),
+            subpage: _openedSubpage,
+            onSubpageChanged: (subpage) =>
+                setState(() => _openedSubpage = subpage),
             onRetry: () {
               final feature = _openedFeature!;
               final query = _featureQueries[feature];
@@ -157,7 +188,9 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
                 ? null
                 : (query) {
                     final feature = _openedFeature!;
-                    _featureQueries[feature] = query;
+                    _featureQueries[feature] = query.copyWith(
+                      updateSchedule: false,
+                    );
                     return widget.onFeatureQuery!(feature, query);
                   },
             onBykcWrite: !_hasWriteCommands || widget.onPrepareBykcWrite == null
@@ -203,14 +236,16 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
       appBar: AppBar(
         title: Text(
           pendingWrite == null
-              ? (_openedFeature?.title ?? _tabs[_selectedIndex].label)
+              ? (_openedSubpage?.title ??
+                    _openedFeature?.title ??
+                    _tabs[_selectedIndex].label)
               : '确认${pendingWrite.operation.title}',
         ),
         leading: _openedFeature == null || pendingWrite != null
             ? null
             : IconButton(
                 tooltip: '返回',
-                onPressed: () => setState(() => _openedFeature = null),
+                onPressed: _navigateBack,
                 icon: const Icon(Icons.arrow_back),
               ),
         actions: <Widget>[
@@ -255,18 +290,22 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     0 => _HomeView(
       user: widget.user,
       snapshots: widget.snapshots,
-      onFeatureTap: (feature) => setState(() => _openedFeature = feature),
-      onRetryFeature: widget.onRetryFeature,
+      onFeatureTap: _openFeature,
+      onAllFeatures: () => _selectTab(1),
+      gradeChangeCount: widget.gradeChangeCount,
+      onDismissGradeChanges: widget.onDismissGradeChanges,
+      onLoadYgdkReminder: widget.onLoadYgdkReminder,
+      onSaveYgdkReminder: widget.onSaveYgdkReminder,
       onRefresh: widget.onRefresh,
     ),
     1 => _FeatureGridView(
       snapshots: widget.snapshots,
-      onFeatureTap: (feature) => setState(() => _openedFeature = feature),
+      onFeatureTap: _openFeature,
       onRetryFeature: widget.onRetryFeature,
     ),
     2 => _AdvancedFeaturesView(
       snapshots: widget.snapshots,
-      onFeatureTap: (feature) => setState(() => _openedFeature = feature),
+      onFeatureTap: _openFeature,
       onRetryFeature: widget.onRetryFeature,
     ),
     _ => _ProfileView(
@@ -279,6 +318,8 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
       onLogoutAndClearAccount: widget.onLogoutAndClearAccount,
       activeRoutes: widget.activeRoutes,
       onReadDiagnostics: widget.onReadDiagnostics,
+      onLoadAppVersion: widget.onLoadAppVersion,
+      onOpenProject: widget.onOpenProject,
     ),
   };
 
@@ -343,8 +384,26 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     setState(() {
       _selectedIndex = index;
       _openedFeature = null;
+      _openedSubpage = null;
     });
   }
+
+  void _openFeature(FeatureId feature) => setState(() {
+    _openedFeature = feature;
+    _openedSubpage = null;
+  });
+
+  void _navigateBack() => setState(() {
+    if (_openedSubpage == _FeatureSubpage.bykcCourseDetail) {
+      _openedSubpage = _FeatureSubpage.bykcCourses;
+    } else if (_openedSubpage == _FeatureSubpage.cgyyOrderDetail) {
+      _openedSubpage = _FeatureSubpage.cgyyOrders;
+    } else if (_openedSubpage != null) {
+      _openedSubpage = null;
+    } else {
+      _openedFeature = null;
+    }
+  });
 
   Future<void> _startBykcWrite(WriteOperation operation, int courseId) async {
     final prepare = widget.onPrepareBykcWrite;
@@ -431,7 +490,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     if (prepare == null) return;
     await _prepareWrite(
       prepare: () => prepare(input),
-      failureMessage: '暂时无法准备场馆预约；尚未提交任何写请求。',
+      failureMessage: '暂时无法准备研讨室预约；尚未提交任何写请求。',
       expectedOperation: WriteOperation.cgyySubmitReservation,
     );
   }
@@ -447,11 +506,16 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     }
     try {
       await run(prepare, expectedOperation: expectedOperation);
-    } on Object {
+    } on Object catch (exception) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failureMessage)));
+      final error = exception is UiError ? exception : widget.writeState.error;
+      final message = error == null
+          ? failureMessage
+          : '${error.message}\n错误代码：${error.code.wireName}'
+                '${error.issueId == null ? '' : '\n错误编号：${error.issueId}'}';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 10)),
+      );
     }
   }
 

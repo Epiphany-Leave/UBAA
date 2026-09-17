@@ -14,8 +14,8 @@ HTML、加密参数、Token、Cookie 和响应正文始终留在 Core 内部，C
 | Feature | CLI | Facade | Frozen request evidence |
 |---|---|---|---|
 | Schedule | `schedule terms`, `weeks`, `current`, `today` | `schedule_terms`, `schedule_weeks`, `schedule_week`, `schedule_today` | `schoolCalendars.do`, `getTermWeeks.do`, `getMyScheduleDetail.do`, `teachingSchedule/detail.do`; `Schedule.kt` |
-| Exam | `exam list --term` | `exam_arrangement` | `student/exams.do`; `Exam.kt` |
-| Grades | `grades list --term` | `grades` | `buaascore/wap/default/index`, activation GET then `xq`/`year` form POST; `Grade.kt` |
+| Exam | `exam terms`, `exam list --term` | `exam_terms`, `exam_arrangement` | 本科 `student/exams.do`；研究生 GSMIS 考试应用独立学期，非空明细无协议证据时明确报未适配 |
+| Grades | `grades overview`, `grades list --term` | `grade_overview`, `grades` | 本科 `buaascore/wap/default/index`；研究生 GSMIS 全量分页成绩与独立 GPA，学期来自成绩本身 |
 | Classroom | `classroom search --campus --date` | `classroom_search` | SSO sync URL then `buaafreeclass/.../search1?xqid=&floorid=&date=`; `Classroom.kt` |
 | SPOC | `spoc assignments`, `spoc assignment show --id` | `spoc_assignments`, `spoc_assignment` | current-term; optional course metadata; global encrypted `queryListByPage` with `kcid=""`; detail and optional submission endpoints; `Spoc.kt` |
 | Judge | `judge assignments`, assignment `show`/`details` | `judge_assignments`, `judge_assignment`, `judge_assignment_details` | SSO service, course/assignment HTML links and detail pages; `Judge.kt` |
@@ -58,7 +58,7 @@ SPOC HTML 不进入公共 DTO。Fixture/Mock 只证明请求形状；真实证�
 
 隐藏的 `spoc diagnostics` 和 `judge diagnostics` CLI 命令调用独立 facade 方法，仅供确定性
 测试和实时验证使用。它们不增加业务请求、不接受 URL、不暴露上游内部信息，也不改变稳定用户
-命令面。输出与普通读取相同的 schema-v10 路由 envelope，并且一次完整功能运行必须保持同一
+命令面。输出与普通读取相同的 schema-v11 路由 envelope，并且一次完整功能运行必须保持同一
 条已解析路线。
 
 SPOC 诊断恰好返回 `globalPageCount` 和普通 `result`。该计数为正 `u32`，证明权威加密全局

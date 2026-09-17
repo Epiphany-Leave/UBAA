@@ -37,6 +37,53 @@ use crate::api::client::{
 };
 
 impl BridgeClient {
+    pub async fn saved_schedule(&self) -> Result<super::BridgeSavedSchedule, BridgeError> {
+        catch_panic(async {
+            let guard = self.inner.lock().await;
+            let client = guard.as_ref().ok_or_else(disposed_error)?;
+            client
+                .saved_schedule()
+                .map(map_saved_schedule)
+                .map_err(|error| BridgeError::from_core(error, None))
+        })
+        .await
+    }
+
+    pub async fn update_saved_schedule(
+        &self,
+        term: Option<String>,
+    ) -> Result<super::BridgeSavedSchedule, BridgeError> {
+        catch_panic(async {
+            let mut guard = self.inner.lock().await;
+            let client = guard.as_mut().ok_or_else(disposed_error)?;
+            client
+                .update_saved_schedule(term.as_deref())
+                .await
+                .map(map_saved_schedule)
+                .map_err(|error| BridgeError::from_core(error, None))
+        })
+        .await
+    }
+    pub async fn exam_terms(&self) -> Result<BridgeRoutedTerms, BridgeError> {
+        let (data, route) = self
+            .execute_read(
+                |client| Box::pin(async move { client.exam_terms().await }),
+                map_terms,
+            )
+            .await?;
+        Ok(BridgeRoutedTerms { data, route })
+    }
+
+    pub async fn grade_overview(&self) -> Result<super::BridgeRoutedGradeOverview, BridgeError> {
+        let (data, route) = self
+            .execute_read(
+                |client| Box::pin(async move { client.grade_overview().await }),
+                super::mappers::map_grade_overview,
+            )
+            .await?;
+        Ok(super::BridgeRoutedGradeOverview { data, route })
+    }
+
     async fn execute_read<T, O, F>(
         &self,
         call: F,
@@ -555,4 +602,23 @@ pub(super) fn ensure_caller_pinned_route(
         message: "调用方固定路线与 Core 返回路线不一致".to_owned(),
         resolved_route: Some(actual),
     })
+}
+fn map_saved_schedule(value: domain::SavedSchedule) -> super::BridgeSavedSchedule {
+    super::BridgeSavedSchedule {
+        terms: map_terms(value.terms),
+        semesters: value
+            .semesters
+            .into_iter()
+            .map(|semester| super::BridgeSavedSemester {
+                term: semester.term,
+                weeks: map_weeks(semester.weeks),
+                schedules: semester
+                    .schedules
+                    .into_iter()
+                    .map(map_weekly_schedule)
+                    .collect(),
+                updated_at: semester.updated_at,
+            })
+            .collect(),
+    }
 }

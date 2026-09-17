@@ -21,6 +21,9 @@ fi
 
 (
   cd "$repo_root/packages/ubaa_bindings"
+  # FRB 2.13 silently emits stem=UNKNOWN when full Cargo metadata fails.
+  # Validate first so missing offline dependencies cannot overwrite working bindings.
+  cargo metadata --format-version 1 --manifest-path "$repo_root/crates/ubaa-flutter-bridge/Cargo.toml" > /dev/null
   PATH="$flutter_root/bin:$PATH" "$codegen" generate --config-file flutter_rust_bridge.yaml
 )
 cargo fmt --manifest-path "$repo_root/Cargo.toml" --all

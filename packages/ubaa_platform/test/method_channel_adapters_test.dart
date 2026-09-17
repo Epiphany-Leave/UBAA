@@ -6,6 +6,25 @@ import 'package:ubaa_platform/ubaa_platform.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('照片系统失败与用户取消区分', () async {
+    const channel = MethodChannel('cn.edu.buaa.ubaa/platform');
+    var fail = false;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'photo.capability') return true;
+          if (fail) throw PlatformException(code: 'photo_unavailable');
+          return null;
+        });
+    final picker = MethodChannelPhotoPicker(channel: channel);
+    await picker.probe();
+    expect(await picker.pickPhoto(), isNull);
+    fail = true;
+    await expectLater(
+      picker.pickPhoto(),
+      throwsA(isA<PlatformCapabilityException>()),
+    );
+  });
+
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(

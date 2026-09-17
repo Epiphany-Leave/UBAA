@@ -15,7 +15,8 @@ Widget coordinatedShell({
   required Future<void> Function() onLogoutAndClearAccount,
   required ValueChanged<RoutePolicy> onRoutePolicyChanged,
   required ValueChanged<bool> onTelemetryChanged,
-  int initialTab = 0,
+  // Feature tests start in the full directory; homepage tests opt into tab 0.
+  int initialTab = 1,
   List<ConnectionMode> activeRoutes = const <ConnectionMode>[],
   Future<void> Function(FeatureId, FeatureQuery)? onFeatureQuery,
   Future<WriteIntent> Function(WriteOperation, int)? onPrepareBykcWrite,

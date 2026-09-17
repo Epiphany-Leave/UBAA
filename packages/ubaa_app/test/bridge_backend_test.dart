@@ -15,15 +15,15 @@ void main() {
   _registerYgdkBridgeBackendTests();
 
   test('BridgeBackend 接受当前合同版本', () {
-    final client = _ContractVersionClient(9);
+    final client = _ContractVersionClient(12);
 
     final backend = BridgeBackend(client);
 
     expect(backend.client, same(client));
   });
 
-  test('BridgeBackend 在 release 可执行路径明确拒绝旧 v8 合同', () {
-    final client = _ContractVersionClient(8);
+  test('BridgeBackend 在 release 可执行路径明确拒绝旧 v9 合同', () {
+    final client = _ContractVersionClient(9);
 
     expect(() => BridgeBackend(client), throwsA(isA<StateError>()));
     expect(client.disposeCalls, 1);
@@ -578,17 +578,23 @@ void main() {
       FeatureId.cgyy,
       const FeatureQuery(view: FeatureQueryView.cgyyDayInfo, siteId: 3),
     );
-    expect(result.details, hasLength(1));
+    expect(result.details, hasLength(2));
+    final reservable = result.details.singleWhere(
+      (detail) => detail.action<CgyyReserveAction>() != null,
+    );
+    expect(
+      result.details.where((detail) => detail.actions.isEmpty),
+      hasLength(1),
+    );
     final fields = {
-      for (final field in result.details.single.fields)
-        field.label: field.value,
+      for (final field in reservable.fields) field.label: field.value,
     };
     expect(fields['站点 ID'], '3');
     expect(fields['空间 ID'], '4');
     expect(fields['时段 ID'], '5');
     expect(fields['空间组 ID'], '9');
     expect(fields['可预约'], '是');
-    final action = result.details.single.action<CgyyReserveAction>();
+    final action = reservable.action<CgyyReserveAction>();
     expect(action, isNotNull);
     expect(action?.venueSiteId, 3);
     expect(action?.reservationDate, '2026-09-03');
@@ -759,7 +765,7 @@ class _ContractVersionClient implements BridgeClient {
 
 abstract class _CompatibleBridgeClient implements BridgeClient {
   @override
-  int contractVersion() => 9;
+  int contractVersion() => 12;
 }
 
 class _FakeClassroomClient extends _CompatibleBridgeClient {

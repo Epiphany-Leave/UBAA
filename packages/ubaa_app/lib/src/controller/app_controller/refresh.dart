@@ -113,6 +113,17 @@ extension _AppControllerRefresh on AppController {
         error: _snapshots[feature]!.error,
         latency: DateTime.now().difference(started),
       );
+      if (feature == FeatureId.grades &&
+          (query == null ||
+              (query.view == FeatureQueryView.summary && query.term == null)) &&
+          _isFeatureLoadCurrent(
+            feature,
+            generation,
+            lifecycleEpoch,
+            ygdkGeneration,
+          )) {
+        _observeGradeDisplay(result);
+      }
     } on Object catch (error, stackTrace) {
       if (!_isFeatureLoadCurrent(
         feature,
@@ -145,6 +156,51 @@ extension _AppControllerRefresh on AppController {
     _notify();
   }
 
+  void _observeGradeDisplay(FeatureResult result) {
+    if (result.error != null || result.resolvedRoute == null) return;
+    if (_gradeScoreRoute != result.resolvedRoute) {
+      _gradeScores.clear();
+      _gradeChangeCount = 0;
+      _gradeScoreRoute = result.resolvedRoute;
+    }
+    final latest = <(String, String), String?>{};
+    final duplicates = <(String, String)>{};
+    for (final detail in result.details) {
+      String? field(String label) {
+        for (final field in detail.fields) {
+          if (field.label == label) return field.value.trim();
+        }
+        return null;
+      }
+
+      final code = detail.subtitle?.trim(), term = field('学期');
+      if (code == null || code.isEmpty || term == null || term.isEmpty)
+        continue;
+      final key = (term, code);
+      if (latest.containsKey(key)) duplicates.add(key);
+      latest[key] = field('成绩');
+    }
+    for (final key in duplicates) {
+      latest.remove(key);
+      _gradeScores.remove(key);
+    }
+    var changes = 0;
+    for (final entry in latest.entries) {
+      if (_gradeScores.containsKey(entry.key) &&
+          entry.value?.isNotEmpty == true &&
+          entry.value != _gradeScores[entry.key])
+        changes++;
+    }
+    // Empty/partial responses cannot invent deleted grades or erase a baseline.
+    for (final entry in latest.entries) {
+      if (!_gradeScores.containsKey(entry.key) ||
+          entry.value?.isNotEmpty == true) {
+        _gradeScores[entry.key] = entry.value;
+      }
+    }
+    if (changes > 0) _gradeChangeCount = changes;
+  }
+
   bool _applyFeatureResultIfCurrent(
     FeatureId feature,
     FeatureResult result,
@@ -169,6 +225,9 @@ extension _AppControllerRefresh on AppController {
       status: status,
       summary: result.summary,
       details: result.details,
+      scheduleNavigation: result.scheduleNavigation,
+      timetable: result.timetable,
+      clearTimetable: result.timetable == null,
       error: result.error == null
           ? null
           : _recordFailure(

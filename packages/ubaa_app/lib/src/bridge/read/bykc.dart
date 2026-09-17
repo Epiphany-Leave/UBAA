@@ -39,6 +39,8 @@ Future<FeatureResult> _loadBykcFeature(
                   fields: _compactFields(<FeatureField?>[
                     _field('课程 ID', item.id.toString()),
                     _field('地点', item.coursePosition),
+                    _field('课程分类', item.subCategoryName),
+                    _field('适用校区', _joinBykcValues(item.audienceCampuses)),
                     _field('状态', item.status.name),
                     item.courseCurrentCount == null
                         ? null
@@ -91,6 +93,14 @@ Future<FeatureResult> _loadBykcFeature(
                 fields: _compactFields(<FeatureField?>[
                   _field('课程 ID', item.id.toString()),
                   _field('地点', item.coursePosition),
+                  _field('开课单位', item.organizerCollegeName),
+                  _field(
+                    '课程分类',
+                    _joinBykcValues(<String?>[
+                      item.categoryName,
+                      item.subCategoryName,
+                    ]),
+                  ),
                   _field('状态', item.status.name),
                   item.courseCurrentCount == null
                       ? null
@@ -103,6 +113,14 @@ Future<FeatureResult> _loadBykcFeature(
                   _field('选课开始', item.courseSelectStartDate),
                   _field('选课截止', item.courseSelectEndDate),
                   _field('退选截止', item.courseCancelEndDate),
+                  _field('适用校区', _joinBykcValues(item.audienceCampuses)),
+                  _field('适用学院', _joinBykcValues(item.audienceColleges)),
+                  _field('适用年级', _joinBykcValues(item.audienceTerms)),
+                  _field('适用人群', _joinBykcValues(item.audienceGroups)),
+                  _field('联系人', item.courseContact),
+                  _field('联系电话', item.courseContactMobile),
+                  _field('课程简介', item.courseDesc),
+                  _field('签到类型', item.courseSignType?.toString()),
                   _field(
                     '已选',
                     item.selected == null
@@ -249,6 +267,15 @@ Future<FeatureResult> _loadBykcFeature(
     default:
       throw StateError('unexpected feature: $feature');
   }
+}
+
+String? _joinBykcValues(Iterable<String?> values) {
+  final normalized = values
+      .whereType<String>()
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
+  return normalized.isEmpty ? null : normalized.join(' / ');
 }
 
 ActionEligibility _toBykcActionEligibility(

@@ -17,12 +17,16 @@ const _expectedBridgeHello = 'UBAA FRB 2.13.0 ready';
 /// hello。失败后不会继续执行，也不会用演示数据伪造可用状态。
 Future<void> bootstrapUbaaHost({
   required void Function() ensureFlutterInitialized,
+  Future<void> Function()? initializePlatformChannels,
   required Future<void> Function() initializeSdk,
   required String Function() debugHello,
   required Future<PlatformCapabilities> Function() createCapabilities,
   required void Function(Widget app) runApplication,
+  Future<void> Function(Timetable? timetable)? syncScheduleWidget,
+  ValueNotifier<OfflineScheduleTarget?>? offlineScheduleTarget,
 }) async {
   ensureFlutterInitialized();
+  await initializePlatformChannels?.call();
   await initializeSdk();
   assert(debugHello() == _expectedBridgeHello);
   final capabilities = await createCapabilities();
@@ -32,8 +36,18 @@ Future<void> bootstrapUbaaHost({
       photoPicker: capabilities.photoPicker,
       permissionGateway: capabilities.permissionGateway,
       locationProvider: capabilities.locationProvider,
+      syncScheduleWidget: syncScheduleWidget,
+      offlineScheduleTarget: offlineScheduleTarget,
     ),
   );
+}
+
+@immutable
+class OfflineScheduleTarget {
+  const OfflineScheduleTarget({this.term, this.week});
+
+  final String? term;
+  final int? week;
 }
 
 /// Flutter 与 HarmonyOS 共用的应用组合根。
@@ -50,6 +64,8 @@ class UbaaAppHost extends StatefulWidget {
     this.locationProvider,
     this.initialTab = 0,
     this.telemetry,
+    this.syncScheduleWidget,
+    this.offlineScheduleTarget,
     super.key,
   });
 
@@ -65,6 +81,8 @@ class UbaaAppHost extends StatefulWidget {
   final PlatformLocationProvider? locationProvider;
   final int initialTab;
   final TelemetryClient? telemetry;
+  final Future<void> Function(Timetable? timetable)? syncScheduleWidget;
+  final ValueNotifier<OfflineScheduleTarget?>? offlineScheduleTarget;
 
   @override
   State<UbaaAppHost> createState() => _UbaaAppHostState();

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/schedule_widget_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_previous" android:visibility="gone"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="上一周"
+            android:gravity="center"
+            android:text="‹"
+            android:textColor="#244C86"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:maxLines="2"
+            android:text="UBAA 今日课程"
+            android:textColor="#18304B"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_next" android:visibility="gone"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="下一周"
+            android:gravity="center"
+            android:text="›"
+            android:textColor="#244C86"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/widget_current" android:visibility="gone"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="回到本周"
+            android:gravity="center"
+            android:text="本周"
+            android:textColor="#244C86"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_message"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="按时间列出今日课程
+打开 UBAA 导入后显示"
+        android:textColor="#42546A" />
+
+    <ImageView
+        android:id="@+id/widget_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:contentDescription="今日课程，点击查看详情"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_footer"
+        android:layout_width="match_parent"
+        android:layout_height="16dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="今日课程 · 点击打开课表"
+        android:textColor="#53647A"
+        android:textSize="10sp" />
+</LinearLayout>

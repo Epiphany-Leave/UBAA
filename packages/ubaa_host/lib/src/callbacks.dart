@@ -50,16 +50,17 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
   Widget _buildApplication() => AnimatedBuilder(
     animation: _controller,
     builder: (context, _) => MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'UBAA',
       debugShowCheckedModeBanner: false,
       theme: UbaaTheme.light(),
       darkTheme: UbaaTheme.dark(),
       themeMode: ThemeMode.system,
-      home: _buildHome(),
+      home: Builder(builder: _buildHome),
     ),
   );
 
-  Widget _buildHome() => switch (_controller.phase) {
+  Widget _buildHome(BuildContext context) => switch (_controller.phase) {
     AppPhase.splash || AppPhase.checkingSession => const UbaaSplashView(),
     AppPhase.login || AppPhase.loggingIn => UbaaLoginView(
       username: _controller.loginForm.username,
@@ -82,11 +83,48 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
         unawaited(_controller.setRoutePolicy(value));
       },
       onSubmit: () => unawaited(_controller.submitLogin()),
+      onOfflineSchedule: () => unawaited(_openOfflineSchedule(context)),
     ),
     AppPhase.home => _buildMainShell(),
   };
 
+  Future<void> _openOfflineSchedule(
+    BuildContext context, [
+    OfflineScheduleTarget? target,
+  ]) async {
+    await _controller.refreshFeatureQuery(
+      FeatureId.schedule,
+      const FeatureQuery(view: FeatureQueryView.scheduleWeek),
+    );
+    if (!context.mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('离线课表')),
+          body: SafeArea(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (_, _) {
+                final snapshot = _controller.snapshots[FeatureId.schedule]!;
+                return TimetableView(
+                  snapshot: snapshot.error == null
+                      ? snapshot
+                      : snapshot.copyWith(clearTimetable: true),
+                  offline: true,
+                  initialTerm: target?.term,
+                  initialWeek: target?.week,
+                  onQuery: (_) async {},
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMainShell() {
+    final reminderAccount = _controller.user?.username;
     final photoPicker = _photoPicker;
     final hasYgdkSubmissionCapabilities =
         _controller.hasYgdkSubmissionBackendCapabilities && photoPicker != null;
@@ -99,6 +137,16 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
       activeRoutes: _controller.activeRoutes,
       onReadDiagnostics: _controller.exportDiagnostics,
       writeState: _controller.writeCoordinator.state,
+      onLoadAppVersion: readInstalledAppVersion,
+      onOpenProject: openUbaaProject,
+      gradeChangeCount: _controller.gradeChangeCount,
+      onDismissGradeChanges: _controller.dismissGradeChanges,
+      onLoadYgdkReminder: reminderAccount == null
+          ? null
+          : () => readYgdkHomeReminder(reminderAccount),
+      onSaveYgdkReminder: reminderAccount == null
+          ? null
+          : (enabled) => saveYgdkHomeReminder(reminderAccount, enabled),
       onRunWritePrepare: _controller.writeCoordinator.prepareForUi,
       onCancelWrite: _controller.writeCoordinator.cancelForUi,
       onConfirmWrite: _controller.writeCoordinator.confirmForUi,

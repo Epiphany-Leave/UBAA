@@ -5,10 +5,12 @@ class _FeatureQueryControls extends StatefulWidget {
     required this.feature,
     required this.details,
     required this.onApply,
+    this.scheduleNavigation,
   });
 
   final FeatureId feature;
   final List<FeatureDetail> details;
+  final ScheduleNavigation? scheduleNavigation;
   final Future<void> Function(FeatureQuery query) onApply;
 
   @override
@@ -102,37 +104,98 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: <Widget>[
-          ..._academicQueryFields(setState),
-          ..._bykcQueryFields(setState),
-          ..._libbookQueryFields(setState),
-          ..._ygdkQueryFields(setState),
-          ..._cgyyQueryFields(setState),
-          ..._spocQueryFields(setState),
-          ..._evaluationQueryFields(setState),
-          ..._signinQueryFields(setState),
-          ..._judgeQueryFields(setState),
-          FilledButton.tonal(
-            onPressed: _submitting ? null : _apply,
-            child: _submitting
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('应用筛选'),
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned(
+        top: 8,
+        right: 12,
+        child: Material(
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(14),
+          child: IconButton(
+            tooltip: '筛选',
+            onPressed: _submitting ? null : _openFilters,
+            icon: const Icon(Icons.tune),
           ),
-        ],
+        ),
+      ),
+    ],
+  );
+
+  Future<void> _openFilters() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setModalState) => SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            20 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('筛选条件', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: <Widget>[
+                  ..._academicQueryFields(setModalState),
+                  ..._bykcQueryFields(setModalState),
+                  ..._libbookQueryFields(setModalState),
+                  ..._ygdkQueryFields(setModalState),
+                  ..._cgyyQueryFields(setModalState),
+                  ..._spocQueryFields(setModalState),
+                  ..._evaluationQueryFields(setModalState),
+                  ..._signinQueryFields(setModalState),
+                  ..._judgeQueryFields(setModalState),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _apply();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('查询'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     ),
   );
+
+  Future<void> _showWeek({String? term, int? week}) async {
+    setState(() => _submitting = true);
+    try {
+      await widget.onApply(
+        FeatureQuery(
+          view: FeatureQueryView.scheduleWeek,
+          term: term,
+          week: week,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
   Future<void> _apply() async {
     setState(() => _submitting = true);

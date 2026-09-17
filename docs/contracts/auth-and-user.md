@@ -12,11 +12,11 @@
 `upstream_changed`，绝不下载、提示或提交验证材料。Core 会拒绝破坏这些关系的聚合 envelope。
 
 稳定 DTO 和错误码由 `goal.md` 第 6 节定义。每个 CLI 成功、失败、参数错误、聚合认证结果和
-隐藏诊断结果都使用 `docs/contracts/cli-json.schema.json` 定义的当前 CLI JSON schema v10；CLI 不再
-输出 schema-v9 或更早 envelope。历史 schema v4 首次承载 Signin typed 写结果，v5–v7 分别承载
+隐藏诊断结果都使用 `docs/contracts/cli-json.schema.json` 定义的当前 CLI JSON schema v11；CLI 不再
+输出 schema-v10 或更早 envelope。历史 schema v4 首次承载 Signin typed 写结果，v5–v7 分别承载
 LibBook 预约、LibBook 取消与 Cgyy 预约合同，v8 承载 Cgyy typed 取消资格与安全结果，v9 再承载
 Ygdk typed 提交资格、请求、安全结果和 caller-pinned 回读，v10 承载 Evaluation typed target、四态批量
-结果与 caller-pinned 回读。这不改变
+结果与 caller-pinned 回读；v11 承载研究生学业读取、成绩统计及节次时间。这不改变
 `config.toml` 或 `session.json` 的版本化迁移读取器，磁盘
 `session.json` 仍为 schema v2。密码绝不会
 进入持久化会话或普通输出。
@@ -42,4 +42,4 @@ version 保留普通文本行为。无效参数文本会归约为安全的 `inva
 命令在发起网络请求前拒绝缺少本地会话；`auth status` 仍会向用户中心校验已有会话后再报告
 成功。
 
-稳定退出类别为：0 表示调用成功完成，2 表示输入无效，3 表示认证失败（包括拒绝密码风险继续），5 表示网络/可用性错误，6 表示上游合同或解析变化，7 表示内部失败。课堂签到的确定业务拒绝以外层 `ok=true`、退出码 0 和内层 `data.success=false` 表达；调用方不得只凭退出码认定签到成功。发送后不确定性使用 `outcome_unknown` 和退出码 5。`docs/contracts/cli-json.schema.json` 已通过实际 dispatcher 序列化的签到 true/false/unknown、其它成功和失败 envelope 验证。
+稳定退出类别为：0 表示调用成功完成，2 表示输入无效，3 表示认证失败（包括拒绝密码风险继续），5 表示网络/可用性错误，6 表示上游合同、解析变化或明确未适配（unsupported），7 表示内部失败。课堂签到的确定业务拒绝以外层 `ok=true`、退出码 0 和内层 `data.success=false` 表达；调用方不得只凭退出码认定签到成功。发送后不确定性使用 `outcome_unknown` 和退出码 5。`docs/contracts/cli-json.schema.json` 已通过实际 dispatcher 序列化的签到 true/false/unknown、其它成功和失败 envelope 验证。

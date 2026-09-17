@@ -115,17 +115,16 @@ Future<FeatureResult> _loadCgyyFeature(
                 slot.reservationEligibility,
               );
               final target = slot.reservationTarget;
-              if (eligibility != ActionEligibility.allowed ||
-                  target == null ||
-                  target.venueSiteId <= 0 ||
-                  target.reservationDate.trim().isEmpty ||
-                  target.spaceId <= 0 ||
-                  target.timeId <= 0 ||
-                  target.timeOrdinal < 0 ||
-                  (target.venueSpaceGroupId != null &&
-                      target.venueSpaceGroupId! <= 0)) {
-                continue;
-              }
+              final hasTarget =
+                  !(eligibility != ActionEligibility.allowed ||
+                      target == null ||
+                      target.venueSiteId <= 0 ||
+                      target.reservationDate.trim().isEmpty ||
+                      target.spaceId <= 0 ||
+                      target.timeId <= 0 ||
+                      target.timeOrdinal < 0 ||
+                      (target.venueSpaceGroupId != null &&
+                          target.venueSpaceGroupId! <= 0));
               final matchingSlots = result.data.timeSlots
                   .where((item) => item.id == slot.timeId)
                   .toList(growable: false);
@@ -137,6 +136,12 @@ Future<FeatureResult> _loadCgyyFeature(
                   title:
                       '${space.spaceName} ${timeSlot?.label ?? '时段 ${slot.timeId}'}',
                   fields: _compactFields(<FeatureField?>[
+                    _field('研讨室', space.spaceName),
+                    _field(
+                      '时段',
+                      timeSlot?.label ??
+                          '${timeSlot?.beginTime ?? ''}-${timeSlot?.endTime ?? ''}',
+                    ),
                     _field('站点 ID', '${result.data.venueSiteId}'),
                     _field('日期', result.data.reservationDate),
                     _field('空间 ID', '${space.spaceId}'),
@@ -144,18 +149,19 @@ Future<FeatureResult> _loadCgyyFeature(
                     _field('时段 ID', '${slot.timeId}'),
                     _field('开始时间', timeSlot?.beginTime),
                     _field('结束时间', timeSlot?.endTime),
-                    _field('可预约', '是'),
+                    _field('可预约', hasTarget ? '是' : '否'),
                   ]),
                   actions: <FeatureAction>[
-                    CgyyReserveAction(
-                      venueSiteId: target.venueSiteId,
-                      reservationDate: target.reservationDate.trim(),
-                      spaceId: target.spaceId,
-                      timeId: target.timeId,
-                      venueSpaceGroupId: target.venueSpaceGroupId,
-                      timeOrdinal: target.timeOrdinal,
-                      eligibility: eligibility,
-                    ),
+                    if (hasTarget)
+                      CgyyReserveAction(
+                        venueSiteId: target.venueSiteId,
+                        reservationDate: target.reservationDate.trim(),
+                        spaceId: target.spaceId,
+                        timeId: target.timeId,
+                        venueSpaceGroupId: target.venueSpaceGroupId,
+                        timeOrdinal: target.timeOrdinal,
+                        eligibility: eligibility,
+                      ),
                   ],
                 ),
               );
@@ -163,7 +169,7 @@ Future<FeatureResult> _loadCgyyFeature(
           }
           return _countResult(
             details.length,
-            '个可预约时段',
+            '个研讨室时段',
             details: details,
             resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
           );
@@ -188,8 +194,16 @@ Future<FeatureResult> _loadCgyyFeature(
             summary: result.data.available ? '门锁可用' : '门锁不可用',
             details: <FeatureDetail>[
               FeatureDetail(
-                title: '门锁状态',
+                title: result.data.lockCode == null ? '暂无可用门锁密码' : '门锁密码',
                 fields: <FeatureField>[
+                  if (result.data.lockCode case final code?)
+                    FeatureField(label: '密码', value: code),
+                  if (result.data.dueDate case final date?)
+                    FeatureField(label: '有效期至', value: date),
+                  if (result.data.room case final room?)
+                    FeatureField(label: '研讨室', value: room),
+                  if (result.data.reservationTime case final time?)
+                    FeatureField(label: '预约时间', value: time),
                   FeatureField(
                     label: '可用',
                     value: result.data.available ? '是' : '否',

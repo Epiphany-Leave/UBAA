@@ -266,6 +266,6 @@ Future<void> _pumpCgyyCancellationShell(
 Future<void> _openCgyyCancellation(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('场馆预约'));
+  await tester.tap(find.text('研讨室预约'));
   await tester.pumpAndSettle();
 }

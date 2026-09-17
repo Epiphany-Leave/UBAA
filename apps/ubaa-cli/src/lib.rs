@@ -41,7 +41,10 @@ mod tests {
 
     #[test]
     fn lock_code_cli_projection_does_not_expose_opaque_payload() {
-        let value = safe_lock_code_value(&CgyyLockCode { available: true });
+        let value = safe_lock_code_value(&CgyyLockCode {
+            available: true,
+            ..Default::default()
+        });
         assert_eq!(value, json!({"available": true}));
     }
 }

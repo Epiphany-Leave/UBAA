@@ -21,7 +21,7 @@ part 'write/commit.dart';
 part 'write/lifecycle.dart';
 part 'write/prepare.dart';
 
-const _supportedBridgeContractVersion = 9;
+const _supportedBridgeContractVersion = 12;
 
 /// 基于 FRB opaque client 的生产后端。
 ///

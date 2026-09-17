@@ -1,5 +1,106 @@
 part of '../bridge_backend.dart';
 
+Future<FeatureResult> _loadSavedSchedule(
+  BridgeBackend backend,
+  FeatureQuery query,
+) async {
+  if (!const {
+    FeatureQueryView.summary,
+    FeatureQueryView.scheduleToday,
+    FeatureQueryView.scheduleTerms,
+    FeatureQueryView.scheduleWeeks,
+    FeatureQueryView.scheduleWeek,
+  }.contains(query.view)) {
+    throw const BackendException(UbaaErrorCode.invalidInput);
+  }
+  var saved = query.updateSchedule
+      ? await backend.client.updateSavedSchedule(term: query.term)
+      : await backend.client.savedSchedule();
+  if (!query.updateSchedule &&
+      query.view == FeatureQueryView.scheduleWeek &&
+      saved.semesters.isEmpty) {
+    saved = await backend.client.updateSavedSchedule(term: query.term);
+  }
+  final timetable = Timetable(
+    terms: {for (final term in saved.terms) term.itemCode: term.itemName},
+    semesters: [
+      for (final semester in saved.semesters)
+        TimetableSemester(
+          term: semester.term,
+          updatedAt: semester.updatedAt,
+          weeks: [
+            for (var i = 0; i < semester.weeks.length; i++)
+              TimetableWeek(
+                number: semester.weeks[i].serialNumber,
+                name: semester.weeks[i].name,
+                start: DateTime.tryParse(semester.weeks[i].startDate),
+                end: DateTime.tryParse(semester.weeks[i].endDate),
+                sections: i >= semester.schedules.length
+                    ? []
+                    : [
+                        for (final section
+                            in semester.schedules[i].sectionTimes)
+                          TimetableSection(
+                            section.section,
+                            section.startTime,
+                            section.endTime,
+                          ),
+                      ],
+                courses: i >= semester.schedules.length
+                    ? []
+                    : [
+                        for (final course in semester.schedules[i].arrangedList)
+                          TimetableCourse(
+                            day: course.dayOfWeek,
+                            begin: course.beginSection,
+                            end: course.endSection,
+                            place: course.placeName,
+                            color: course.color,
+                            detail: FeatureDetail(
+                              title: course.courseName,
+                              subtitle: course.courseCode,
+                              fields: _compactFields([
+                                _field('课程序号', course.courseSerialNo),
+                                _field('学分', course.credit),
+                                _field('开始时间', course.beginTime),
+                                _field('结束时间', course.endTime),
+                                _field(
+                                  '节次',
+                                  course.beginSection == null
+                                      ? '未提供'
+                                      : '${course.beginSection}–${course.endSection ?? course.beginSection}',
+                                ),
+                                _field('地点', course.placeName),
+                                _field('周次与教师', course.weeksAndTeachers),
+                                _field('教学对象', course.teachingTarget),
+                              ]),
+                            ),
+                          ),
+                      ],
+              ),
+          ],
+        ),
+    ],
+  );
+  if (saved.semesters.isEmpty) return FeatureResult.empty(timetable: timetable);
+  final now = query.date ?? DateTime.now();
+  final current = timetable.semesters
+      .expand((semester) => semester.weeks)
+      .where((week) => week.contains(now))
+      .firstOrNull;
+  final details =
+      current?.courses
+          .where((course) => course.day == now.weekday)
+          .map((course) => course.detail)
+          .toList() ??
+      <FeatureDetail>[];
+  return FeatureResult.success(
+    summary: '今日 ${details.length} 门课程',
+    details: details,
+    timetable: timetable,
+  );
+}
+
 Future<FeatureResult> _loadAcademicFeature(
   BridgeBackend backend,
   FeatureId feature,
@@ -9,158 +110,51 @@ Future<FeatureResult> _loadAcademicFeature(
   final client = backend.client;
   switch (feature) {
     case FeatureId.schedule:
-      switch (query.view) {
-        case FeatureQueryView.summary:
-        case FeatureQueryView.scheduleToday:
-          if (query.view == FeatureQueryView.summary &&
-              query.term != null &&
-              query.week != null) {
-            final result = await client.scheduleWeek(
-              term: query.term!,
-              week: query.week!,
-            );
-            final details = result.data.arrangedList
-                .map(
-                  (item) => FeatureDetail(
-                    title: item.courseName,
-                    subtitle: item.courseCode,
-                    fields: _compactFields(<FeatureField?>[
-                      _field('时间', item.beginTime),
-                      _field('地点', item.placeName),
-                      _field('周次', item.weeksAndTeachers),
-                    ]),
-                  ),
-                )
-                .toList(growable: false);
-            return _countResult(
-              details.length,
-              '第 ${query.week} 周课表',
-              details: details,
-              resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
-            );
-          }
-          final result = await client.scheduleToday();
-          final details = result.data
-              .map(
-                (item) => FeatureDetail(
-                  title: item.bizName,
-                  subtitle: item.shortName,
-                  fields: _compactFields(<FeatureField?>[
-                    _field('时间', item.time),
-                    _field('地点', item.place),
-                  ]),
-                ),
-              )
-              .toList(growable: false);
-          return _countResult(
-            result.data.length,
-            '今日课程',
-            details: details,
-            resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
-          );
-        case FeatureQueryView.scheduleTerms:
-          final result = await client.scheduleTerms();
-          final details = result.data
-              .map(
-                (item) => FeatureDetail(
-                  title: item.itemName,
-                  fields: <FeatureField>[
-                    FeatureField(label: '学期编码', value: item.itemCode),
-                    FeatureField(
-                      label: '当前学期',
-                      value: item.selected ? '是' : '否',
-                    ),
-                  ],
-                ),
-              )
-              .toList(growable: false);
-          return _countResult(
-            details.length,
-            '个学期',
-            details: details,
-            resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
-          );
-        case FeatureQueryView.scheduleWeeks:
-          final term = _requiredQueryValue(query.term, '学期编码');
-          final result = await client.scheduleWeeks(term: term);
-          final details = result.data
-              .map(
-                (item) => FeatureDetail(
-                  title: item.name,
-                  subtitle: '${item.startDate}–${item.endDate}',
-                  fields: <FeatureField>[
-                    FeatureField(label: '周次', value: '${item.serialNumber}'),
-                    FeatureField(label: '当前周', value: item.curWeek ? '是' : '否'),
-                  ],
-                ),
-              )
-              .toList(growable: false);
-          return _countResult(
-            details.length,
-            '个周次',
-            details: details,
-            resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
-          );
-        case FeatureQueryView.scheduleWeek:
-          final term = _requiredQueryValue(query.term, '学期编码');
-          final week = query.week;
-          if (week == null || week <= 0) {
-            throw const BackendException(UbaaErrorCode.invalidInput);
-          }
-          final result = await client.scheduleWeek(term: term, week: week);
-          final details = result.data.arrangedList
-              .map(
-                (item) => FeatureDetail(
-                  title: item.courseName,
-                  subtitle: item.courseCode,
-                  fields: _compactFields(<FeatureField?>[
-                    _field('时间', item.beginTime),
-                    _field('地点', item.placeName),
-                    _field('周次', item.weeksAndTeachers),
-                  ]),
-                ),
-              )
-              .toList(growable: false);
-          return _countResult(
-            details.length,
-            '第 $week 周课表',
-            details: details,
-            resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
-          );
-        default:
-          throw const BackendException(UbaaErrorCode.invalidInput);
-      }
+      return _loadSavedSchedule(backend, query);
     case FeatureId.exam:
       switch (query.view) {
         case FeatureQueryView.summary:
         case FeatureQueryView.examArranged:
         case FeatureQueryView.examNotArranged:
-          final term = query.term ?? await _selectedTerm(backend);
+          final term = query.term ?? await _selectedExamTerm(backend);
           if (term == null) return const FeatureResult.empty();
           final result = await client.examArrangement(term: term);
           final exams = switch (query.view) {
-            FeatureQueryView.examArranged => result.data.arranged,
-            FeatureQueryView.examNotArranged => result.data.notArranged,
-            _ => <BridgeExam>[
-              ...result.data.arranged,
-              ...result.data.notArranged,
+            FeatureQueryView.examArranged => [
+              for (final item in result.data.arranged)
+                (item: item, arranged: true),
+            ],
+            FeatureQueryView.examNotArranged => [
+              for (final item in result.data.notArranged)
+                (item: item, arranged: false),
+            ],
+            _ => [
+              for (final item in result.data.arranged)
+                (item: item, arranged: true),
+              for (final item in result.data.notArranged)
+                (item: item, arranged: false),
             ],
           };
           final details = exams
               .map(
-                (item) => FeatureDetail(
-                  title: item.courseName,
-                  subtitle: item.examTimeDescription ?? item.examDate,
+                (exam) => FeatureDetail(
+                  title: exam.item.courseName,
+                  subtitle: exam.item.examTimeDescription ?? exam.item.examDate,
                   fields: _compactFields(<FeatureField?>[
+                    _field('考试日期', exam.item.examDate),
                     _field(
                       '时间',
-                      item.startTime == null || item.endTime == null
+                      exam.item.startTime == null || exam.item.endTime == null
                           ? null
-                          : '${item.startTime}–${item.endTime}',
+                          : '${exam.item.startTime}–${exam.item.endTime}',
                     ),
-                    _field('地点', item.examPlace),
-                    _field('座位', item.examSeatNo),
-                    _field('类型', item.examType),
+                    _field('地点', exam.item.examPlace),
+                    _field('座位', exam.item.examSeatNo),
+                    _field('类型', exam.item.examType),
+                    FeatureField(
+                      label: '安排状态',
+                      value: exam.arranged ? '已安排' : '未安排',
+                    ),
                   ]),
                 ),
               )
@@ -184,19 +178,31 @@ Future<FeatureResult> _loadAcademicFeature(
         case FeatureQueryView.summary:
         case FeatureQueryView.gradesScored:
         case FeatureQueryView.gradesMissing:
-          final term = query.term ?? await _selectedTerm(backend);
-          if (term == null) return const FeatureResult.empty();
-          final result = await client.grades(term: term);
+          final overview = query.term == null
+              ? await client.gradeOverview()
+              : null;
+          late final List<BridgeGrade> allGrades;
+          late final BridgeRouteDecision route;
+          if (overview?.data.graduate ?? false) {
+            allGrades = overview!.data.grades;
+            route = overview.route;
+          } else {
+            final term = query.term ?? await _selectedTerm(backend);
+            if (term == null) return const FeatureResult.empty();
+            final result = await client.grades(term: term);
+            allGrades = result.data.grades;
+            route = result.route;
+          }
           final grades = switch (query.view) {
             FeatureQueryView.gradesScored =>
-              result.data.grades
+              allGrades
                   .where((item) => item.score?.trim().isNotEmpty ?? false)
                   .toList(growable: false),
             FeatureQueryView.gradesMissing =>
-              result.data.grades
+              allGrades
                   .where((item) => !(item.score?.trim().isNotEmpty ?? false))
                   .toList(growable: false),
-            _ => result.data.grades,
+            _ => allGrades,
           };
           final details = grades
               .map(
@@ -207,21 +213,49 @@ Future<FeatureResult> _loadAcademicFeature(
                     _field('成绩', item.score),
                     _field('绩点', item.gradePoint),
                     item.credit == null ? null : _field('学分', '${item.credit}'),
+                    item.averageScore == null
+                        ? null
+                        : _field('折算分', item.averageScore!.toStringAsFixed(2)),
+                    _field('成绩制', item.scoreType),
                     _field('课程类型', item.courseType),
+                    _field('学期', item.termName ?? item.termCode),
                   ]),
                 ),
               )
-              .toList(growable: false);
+              .toList();
+          if (overview?.data.graduate == true &&
+              query.view == FeatureQueryView.summary) {
+            final statistics = overview!.data.statistics;
+            if (statistics != null) {
+              details.insert(0, _gradeStatisticsDetail('研究生成绩统计', statistics));
+            }
+            details.addAll(
+              overview.data.terms.map(
+                (term) =>
+                    _gradeStatisticsDetail(term.termName, term.statistics),
+              ),
+            );
+          }
           final label = switch (query.view) {
             FeatureQueryView.gradesScored => '门已出成绩课程',
             FeatureQueryView.gradesMissing => '门待出成绩课程',
             _ => '门课程成绩',
           };
+          if (overview?.data.graduate == true &&
+              query.view == FeatureQueryView.summary) {
+            return FeatureResult.success(
+              summary: grades.isEmpty
+                  ? '暂无成绩，统计将在成绩公布后更新'
+                  : '${grades.length}$label',
+              details: details,
+              resolvedRoute: _toConnectionMode(route.resolvedRoute),
+            );
+          }
           return _countResult(
             grades.length,
             label,
             details: details,
-            resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
+            resolvedRoute: _toConnectionMode(route.resolvedRoute),
           );
         default:
           throw const BackendException(UbaaErrorCode.invalidInput);
@@ -267,6 +301,36 @@ Future<String?> _selectedTerm(BridgeBackend backend) async {
   }
   return null;
 }
+
+Future<String?> _selectedExamTerm(BridgeBackend backend) async {
+  final result = await backend.client.examTerms();
+  for (final term in result.data) {
+    if (term.selected && term.itemCode.trim().isNotEmpty) return term.itemCode;
+  }
+  for (final term in result.data) {
+    if (term.itemCode.trim().isNotEmpty) return term.itemCode;
+  }
+  return null;
+}
+
+FeatureDetail _gradeStatisticsDetail(
+  String title,
+  BridgeGradeStatistics statistics,
+) => FeatureDetail(
+  title: title,
+  fields: <FeatureField>[
+    FeatureField(
+      label: 'GPA',
+      value: statistics.gpa?.toStringAsFixed(3) ?? '暂无可计算成绩',
+    ),
+    FeatureField(
+      label: '加权均分',
+      value: statistics.averageScore?.toStringAsFixed(2) ?? '暂无可计算成绩',
+    ),
+    FeatureField(label: 'GPA 计入学分', value: '${statistics.gpaCredits}'),
+    FeatureField(label: '均分计入学分', value: '${statistics.averageCredits}'),
+  ],
+);
 
 bool _matchesClassroomFloor(
   BridgeClassroomInfo room,

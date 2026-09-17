@@ -1,6 +1,21 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SavedSchedule {
+    pub terms: Vec<Term>,
+    pub semesters: Vec<SavedSemester>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SavedSemester {
+    pub term: String,
+    pub weeks: Vec<Week>,
+    /// Same order as weeks; includes empty weeks.
+    pub schedules: Vec<WeeklySchedule>,
+    pub updated_at: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Term {
     pub item_code: String,
@@ -41,6 +56,16 @@ pub struct WeeklySchedule {
     pub arranged_list: Vec<CourseClass>,
     pub code: String,
     pub name: String,
+    #[serde(default)]
+    pub section_times: Vec<SectionTime>,
+}
+/// 上游节次方案中的完整时间轴。
+#[derive(Clone, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SectionTime {
+    pub section: i32,
+    pub start_time: String,
+    pub end_time: String,
 }
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

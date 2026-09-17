@@ -290,8 +290,7 @@ impl FileSessionStore {
             .ok_or_else(|| session_error("session path has no parent directory"))?;
         validate_directory(parent)?;
         let file = self.open_lock_file()?;
-        file.lock()
-            .map_err(|_| session_error("could not lock session"))?;
+        super::storage::lock_file(&file).map_err(|_| session_error("could not lock session"))?;
         Ok(SessionFileLock {
             _process_guard: process_guard,
             file,

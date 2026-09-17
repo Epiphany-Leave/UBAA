@@ -23,11 +23,13 @@ class _SetterRecordingBackend extends BridgeBackend {
 class _CharacterizationBridgeClient implements BridgeClient {
   _CharacterizationBridgeClient({
     this.emptyReads = false,
+    this.gradeOverviewFixture,
     this.ygdkOverviewFixture,
     List<String>? events,
   }) : calls = events ?? <String>[];
 
   final bool emptyReads;
+  final BridgeGradeOverview? gradeOverviewFixture;
   final BridgeYgdkOverview? ygdkOverviewFixture;
   final List<String> calls;
   final Map<Symbol, Object> writeRequests = <Symbol, Object>{};
@@ -43,7 +45,14 @@ class _CharacterizationBridgeClient implements BridgeClient {
   );
 
   @override
-  int contractVersion() => 9;
+  int contractVersion() => 12;
+
+  @override
+  Future<BridgeSavedSchedule> savedSchedule() async {
+    calls.add('savedSchedule');
+    if (emptyReads) return const BridgeSavedSchedule(terms: [], semesters: []);
+    return _savedScheduleFixture();
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -160,6 +169,16 @@ class _CharacterizationBridgeClient implements BridgeClient {
             data: BridgeBykcCourse(
               id: 42,
               courseName: '课程详情',
+              organizerCollegeName: '人文学院',
+              categoryName: '博雅课程',
+              subCategoryName: '美育',
+              courseContact: '张老师',
+              courseContactMobile: '010-00000000',
+              courseDesc: '课程简介正文',
+              audienceCampuses: ['学院路'],
+              audienceColleges: ['计算机学院'],
+              audienceTerms: ['2026级'],
+              audienceGroups: ['研究生'],
               status: BridgeBykcCourseStatus.available,
               selectEligibility: BridgeActionEligibility.denied,
               deselectEligibility: BridgeActionEligibility.allowed,
@@ -179,6 +198,10 @@ class _CharacterizationBridgeClient implements BridgeClient {
                       BridgeBykcCourse(
                         id: 101,
                         courseName: '课程分页',
+                        audienceCampuses: [],
+                        audienceColleges: [],
+                        audienceTerms: [],
+                        audienceGroups: [],
                         status: BridgeBykcCourseStatus.available,
                         selectEligibility: BridgeActionEligibility.allowed,
                         deselectEligibility: BridgeActionEligibility.denied,
@@ -407,6 +430,19 @@ class _CharacterizationBridgeClient implements BridgeClient {
             route: _webVpnRoute,
           ),
         );
+      case #gradeOverview:
+        return Future<BridgeRoutedGradeOverview>.value(
+          BridgeRoutedGradeOverview(
+            data:
+                gradeOverviewFixture ??
+                const BridgeGradeOverview(
+                  graduate: false,
+                  grades: <BridgeGrade>[],
+                  terms: <BridgeGradeTermStatistics>[],
+                ),
+            route: _webVpnRoute,
+          ),
+        );
       case #grades:
         return Future<BridgeRoutedGrades>.value(
           BridgeRoutedGrades(
@@ -416,6 +452,7 @@ class _CharacterizationBridgeClient implements BridgeClient {
                   ? const <BridgeGrade>[]
                   : const <BridgeGrade>[
                       BridgeGrade(
+                        graduate: false,
                         courseName: '成绩课程',
                         courseCode: 'GRADE1',
                         score: '95',
@@ -581,6 +618,7 @@ class _CharacterizationBridgeClient implements BridgeClient {
             route: _webVpnRoute,
           ),
         );
+      case #examTerms:
       case #scheduleTerms:
         return Future<BridgeRoutedTerms>.value(
           BridgeRoutedTerms(
@@ -616,6 +654,7 @@ class _CharacterizationBridgeClient implements BridgeClient {
         return Future<BridgeRoutedWeeklySchedule>.value(
           BridgeRoutedWeeklySchedule(
             data: BridgeWeeklySchedule(
+              sectionTimes: const <BridgeSectionTime>[],
               arrangedList: emptyReads
                   ? const <BridgeCourseClass>[]
                   : const <BridgeCourseClass>[
@@ -767,6 +806,8 @@ const _readMembers = <Symbol>{
   #evaluationAll,
   #evaluationAllOnRoute,
   #examArrangement,
+  #examTerms,
+  #gradeOverview,
   #grades,
   #judgeAssignment,
   #judgeAssignmentDetails,

@@ -316,10 +316,20 @@ fn parse_bookings_with_metadata(
         .map(|booking| {
             let id = text(booking, &["id"]);
             let status = optional_i32(booking, "status");
+            let status_name = text(booking, &["status_name", "statusName"]);
             let target = (!id.trim().is_empty()).then(|| id.trim().to_owned());
             let cancel_eligibility = match (status, target.as_ref()) {
-                (Some(1), Some(_)) => ActionEligibility::Allowed,
                 (Some(6 | 8), Some(_)) => ActionEligibility::Denied,
+                (_, Some(_))
+                    if matches!(
+                        status_name.trim(),
+                        "用户取消" | "已取消" | "已结束" | "已完成" | "已过期" | "已失效"
+                    ) =>
+                {
+                    ActionEligibility::Denied
+                }
+                (Some(1), Some(_)) => ActionEligibility::Allowed,
+                (_, Some(_)) if status_name.trim() == "预约成功" => ActionEligibility::Allowed,
                 _ => ActionEligibility::Unknown,
             };
             let cancel_target = match cancel_eligibility {
@@ -335,7 +345,7 @@ fn parse_bookings_with_metadata(
                 begin_time: text(booking, &["beginTime", "begin_time"]),
                 end_time: text(booking, &["endTime", "end_time"]),
                 status,
-                status_name: text(booking, &["status_name", "statusName"]),
+                status_name,
                 cancel_eligibility,
                 cancel_target,
             }

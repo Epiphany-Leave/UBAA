@@ -11,6 +11,18 @@ void main() {
   final read = File('lib/src/rust/api/read.dart').readAsStringSync();
   final write = File('lib/src/rust/api/write.dart').readAsStringSync();
 
+  test('生成的库名必须与 Rust crate 一致，不能静默使用 UNKNOWN', () {
+    final generated = File('lib/src/rust/frb_generated.dart').readAsStringSync();
+    expect(generated.contains("stem: 'ubaa_flutter_bridge'"), isTrue);
+    expect(generated.contains("'UNKNOWN'"), isFalse);
+  });
+
+  test('研究生成绩与考试可独立于课表学期读取', () {
+    expect(client, contains('examTerms('));
+    expect(client, contains('gradeOverview('));
+    expect(read, contains('class BridgeGradeOverview'));
+  });
+
   test('生成读取 API 保持单一 canonical 输出文件', () {
     const apiRoot = 'lib/src/rust/api/';
     final readArtifacts =
@@ -45,6 +57,8 @@ void main() {
       'scheduleWeeks',
       'scheduleWeek',
       'scheduleToday',
+      'savedSchedule',
+      'updateSavedSchedule',
       'examArrangement',
       'grades',
       'classroomSearch',

@@ -705,10 +705,30 @@ pub(super) fn shanghai_datetime(now: SystemTime) -> NaiveDateTime {
         .naive_local()
 }
 
-/// 解析门锁码响应，仅保留是否存在数据的安全摘要。
+/// 按旧版密码页面字段解析；不将原始响应交给宿主。
 pub fn parse_lock_code(body: &str) -> Result<CgyyLockCode> {
     let root = success_root(body)?;
+    let data = &root["data"];
+    let text = |value: &Value| {
+        value
+            .as_str()
+            .map(str::trim)
+            .filter(|v| !v.is_empty() && *v != "null")
+            .map(str::to_owned)
+    };
+    let order = &data["orderView"];
+    let room = ["venueName", "siteName", "venueSpaceName"]
+        .iter()
+        .filter_map(|key| text(&order[*key]))
+        .collect::<Vec<_>>()
+        .join(" ");
     Ok(CgyyLockCode {
         available: !root.get("data").is_none_or(Value::is_null),
+        lock_code: text(&data["qrCode"])
+            .or_else(|| text(&data["lockCode"]))
+            .or_else(|| text(&data["password"])),
+        due_date: text(&data["dueDate"]),
+        room: (!room.is_empty()).then_some(room),
+        reservation_time: text(&order["reservationDateDetail"]),
     })
 }

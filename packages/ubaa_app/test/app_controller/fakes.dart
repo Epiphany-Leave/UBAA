@@ -42,6 +42,15 @@ final class _RefreshMatrixBackend implements UbaaBackend, FeatureQueryBackend {
   }
 }
 
+class _GradeNoticeBackend extends _FlakyBackend implements FeatureQueryBackend {
+  _GradeNoticeBackend({required super.load});
+  @override
+  Future<FeatureResult> loadFeatureQuery(
+    FeatureId feature,
+    FeatureQuery query,
+  ) => load(feature);
+}
+
 class _FlakyBackend implements UbaaBackend {
   _FlakyBackend({required this.load});
 

@@ -11,6 +11,8 @@ class _ProfileView extends StatelessWidget {
     required this.onLogoutAndClearAccount,
     required this.activeRoutes,
     this.onReadDiagnostics,
+    this.onLoadAppVersion,
+    this.onOpenProject,
   });
 
   final UserSummary? user;
@@ -22,6 +24,8 @@ class _ProfileView extends StatelessWidget {
   final Future<void> Function() onLogoutAndClearAccount;
   final List<ConnectionMode> activeRoutes;
   final String Function()? onReadDiagnostics;
+  final Future<String?> Function()? onLoadAppVersion;
+  final Future<bool> Function()? onOpenProject;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -93,6 +97,21 @@ class _ProfileView extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 24),
+      Card(
+        child: ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: const Text('关于 UBAA'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => _AboutView(
+                loadVersion: onLoadAppVersion,
+                openProject: onOpenProject,
+              ),
+            ),
+          ),
+        ),
+      ),
       OutlinedButton.icon(
         onPressed: () => onLogout(),
         icon: const Icon(Icons.logout),

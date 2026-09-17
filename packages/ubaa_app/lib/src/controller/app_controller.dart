@@ -67,12 +67,14 @@ class AppController extends ChangeNotifier {
     CredentialVault? credentialVault,
     TelemetryClient? telemetry,
     LocalDiagnostics? diagnostics,
+    Duration sessionCheckTimeout = const Duration(seconds: 10),
   }) : _backend = backend,
        _backendFactory = backendFactory,
        _credentialVault = credentialVault ?? const NoopCredentialVault(),
        _telemetry = telemetry ?? const NoopTelemetryClient(),
        _diagnostics = diagnostics ?? LocalDiagnostics(),
        _telemetryEnabled = (telemetry ?? const NoopTelemetryClient()).enabled,
+       _sessionCheckTimeout = sessionCheckTimeout,
        _snapshots = {
          for (final feature in FeatureId.values)
            feature: FeatureSnapshot(feature: feature),
@@ -86,6 +88,7 @@ class AppController extends ChangeNotifier {
   final CredentialVault _credentialVault;
   final TelemetryClient _telemetry;
   final LocalDiagnostics _diagnostics;
+  final Duration _sessionCheckTimeout;
   final Map<FeatureId, FeatureSnapshot> _snapshots;
   late WriteCoordinator _writeCoordinator;
   int _writeTransitions = 0;
@@ -102,6 +105,10 @@ class AppController extends ChangeNotifier {
   int _lifecycleEpoch = 0;
   int _ygdkGeneration = 0;
   bool _telemetryEnabled;
+  // ponytail: session-only display baseline; persistent notices need a scoped store.
+  Map<(String, String), String?> _gradeScores = {};
+  ConnectionMode? _gradeScoreRoute;
+  int _gradeChangeCount = 0;
   YgdkReadbackState _ygdkReadbackState = const YgdkReadbackState.empty();
   List<ConnectionMode> _activeRoutes = const <ConnectionMode>[];
   bool _rebuildingBackend = false;
@@ -115,6 +122,13 @@ class AppController extends ChangeNotifier {
   UserSummary? get user => _user;
   UiError? get error => _error;
   bool get telemetryEnabled => _telemetryEnabled;
+  int get gradeChangeCount => _gradeChangeCount;
+
+  void dismissGradeChanges() {
+    _gradeChangeCount = 0;
+    _notify();
+  }
+
   bool get credentialPersistenceAvailable => _credentialVault.isAvailable;
   List<ConnectionMode> get activeRoutes =>
       List<ConnectionMode>.unmodifiable(_activeRoutes);
@@ -150,7 +164,13 @@ class AppController extends ChangeNotifier {
         if (_disposed) return;
         _applyRouteSettings(settings);
       }
-      final status = await _backend.authStatus();
+      final status = await _backend.authStatus().timeout(
+        _sessionCheckTimeout,
+        onTimeout: () => throw const BackendException(
+          UbaaErrorCode.timeout,
+          retryable: true,
+        ),
+      );
       if (_disposed) return;
       if (status == AuthStatus.signedIn) {
         _user = await _backend.userInfo();
@@ -782,6 +802,9 @@ class AppController extends ChangeNotifier {
   };
 
   void _resetFeatureSnapshots() {
+    _gradeScores.clear();
+    _gradeScoreRoute = null;
+    _gradeChangeCount = 0;
     _lifecycleEpoch++;
     _ygdkGeneration++;
     _writeCoordinator.invalidate();

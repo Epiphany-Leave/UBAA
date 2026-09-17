@@ -247,6 +247,7 @@ String? _nonBlank(String? value) {
 
 BackendException _mapError(BridgeError error) => BackendException(
   _typedErrorCode(error.code),
+  detail: safeReservationFailure(error.message),
   kind: _typedErrorKind(error.kind),
   retryable: error.retryable,
   resolvedRoute: error.resolvedRoute == null
@@ -267,6 +268,7 @@ UbaaErrorCode _typedErrorCode(BridgeErrorCode code) => switch (code) {
   BridgeErrorCode.upstreamUnavailable => UbaaErrorCode.upstreamUnavailable,
   BridgeErrorCode.upstreamChanged => UbaaErrorCode.upstreamChanged,
   BridgeErrorCode.parseError => UbaaErrorCode.parseError,
+  BridgeErrorCode.unsupported => UbaaErrorCode.unsupported,
   BridgeErrorCode.internalError ||
   BridgeErrorCode.clientDisposed => UbaaErrorCode.internalError,
   BridgeErrorCode.confirmationRequired => UbaaErrorCode.confirmationRequired,
@@ -309,6 +311,7 @@ UbaaErrorCode _errorCode(String? code) => switch (code) {
   'upstream_unavailable' => UbaaErrorCode.upstreamUnavailable,
   'upstreamChanged' || 'upstream_changed' => UbaaErrorCode.upstreamChanged,
   'parseError' || 'parse_error' => UbaaErrorCode.parseError,
+  'unsupported' => UbaaErrorCode.unsupported,
   'clientDisposed' || 'client_disposed' => UbaaErrorCode.internalError,
   'confirmationRequired' ||
   'confirmation_required' => UbaaErrorCode.confirmationRequired,

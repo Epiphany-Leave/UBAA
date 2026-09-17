@@ -78,6 +78,7 @@ fn routed_primary_success_representatives() -> Vec<(CliFeature, serde_json::Valu
                 arranged_list: vec![CourseClass::default()],
                 code: "2025-2026-1".into(),
                 name: "Term".into(),
+                section_times: Vec::new(),
             })
             .unwrap(),
         ),

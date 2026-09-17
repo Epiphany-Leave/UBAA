@@ -10,16 +10,29 @@ class UbaaErrorMapper {
   static UiError fromCode(UbaaErrorCode code) =>
       const UiErrorMapper().fromCore(CoreErrorPayload(code: code.wireName));
 
-  static UiError fromException(BackendException error) =>
-      const UiErrorMapper().fromCore(
-        CoreErrorPayload(
-          code: error.code.wireName,
-          kind: error.kind?.name,
-          retryable: error.retryable,
-          resolvedRoute: error.resolvedRoute,
-          issueId: error.issueId,
-        ),
-      );
+  static UiError fromException(BackendException error) {
+    final mapped = const UiErrorMapper().fromCore(
+      CoreErrorPayload(
+        code: error.code.wireName,
+        kind: error.kind?.name,
+        retryable: error.retryable,
+        resolvedRoute: error.resolvedRoute,
+        issueId: error.issueId,
+      ),
+    );
+    final message = safeReservationFailure(error.detail);
+    if (message == null) return mapped;
+    return UiError(
+      code: mapped.code,
+      title: mapped.title,
+      message: message,
+      actionLabel: mapped.actionLabel,
+      retryable: mapped.retryable,
+      issueId: mapped.issueId,
+      kind: mapped.kind,
+      resolvedRoute: mapped.resolvedRoute,
+    );
+  }
 
   /// 不把异常正文作为用户提示；已验证的 typed 错误保留机器元数据。
   static UiError fromObject(Object error) => switch (error) {

@@ -1,6 +1,71 @@
 part of '../app_controller_test.dart';
 
 void _registerReadTests() {
+  test('成绩变化仅比较同学期课程，失败不覆盖基线，注销清理提示', () async {
+    String? score;
+    var term = '20261';
+    var fail = false;
+    final controller = AppController(
+      backend: _GradeNoticeBackend(
+        load: (_) async {
+          if (fail) throw const BackendException(UbaaErrorCode.networkError);
+          return FeatureResult.success(
+            resolvedRoute: ConnectionMode.direct,
+            details: [
+              FeatureDetail(
+                title: '测试课程',
+                subtitle: 'course-1',
+                fields: [
+                  FeatureField(label: '学期', value: term),
+                  if (score != null) FeatureField(label: '成绩', value: score),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    addTearDown(controller.dispose);
+    Future<void> refresh() => controller.refreshHome(only: [FeatureId.grades]);
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+    score = '优秀';
+    await refresh();
+    expect(controller.gradeChangeCount, 1);
+    controller.dismissGradeChanges();
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+    score = null;
+    await refresh();
+    score = '优秀';
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+    score = '良好';
+    await controller.refreshFeatureQuery(
+      FeatureId.grades,
+      const FeatureQuery(view: FeatureQueryView.gradesScored),
+    );
+    expect(controller.gradeChangeCount, 0);
+    fail = true;
+    score = '良好';
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+    fail = false;
+    await refresh();
+    expect(controller.gradeChangeCount, 1);
+    controller.dismissGradeChanges();
+    term = '20262';
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+    score = '合格';
+    await refresh();
+    expect(controller.gradeChangeCount, 1);
+    await controller.logout();
+    expect(controller.gradeChangeCount, 0);
+    await refresh();
+    expect(controller.gradeChangeCount, 0);
+  });
+
   test('刷新失败时保留上次数据并标记 stale', () async {
     var loads = 0;
     final backend = _FlakyBackend(

@@ -15,6 +15,48 @@ type SeatStatusCase = (
     Option<&'static str>,
 );
 
+#[test]
+fn booking_success_label_preserves_cancel_action() {
+    for (row, expected) in [
+        (
+            r#"{"id":"safe","status_name":"预约成功"}"#,
+            ActionEligibility::Allowed,
+        ),
+        (
+            r#"{"id":"safe","status":2,"statusName":"预约成功"}"#,
+            ActionEligibility::Allowed,
+        ),
+        (
+            r#"{"id":"safe","status":6,"status_name":"预约成功"}"#,
+            ActionEligibility::Denied,
+        ),
+        (
+            r#"{"id":"safe","status_name":"用户取消"}"#,
+            ActionEligibility::Denied,
+        ),
+        (
+            r#"{"id":"","status_name":"预约成功"}"#,
+            ActionEligibility::Unknown,
+        ),
+        (
+            r#"{"id":"safe","status_name":"未知状态"}"#,
+            ActionEligibility::Unknown,
+        ),
+    ] {
+        let body =
+            format!(r#"{{"code":1,"data":{{"data":[{row}],"current_page":1,"per_page":20}}}}"#);
+        for page in [
+            parse_bookings_for_request(&body, 1, 20).unwrap(),
+            super::parser::parse_bookings_with_strict_metadata(&body).unwrap(),
+        ] {
+            assert_eq!(page.bookings[0].cancel_eligibility, expected, "{row}");
+            if expected == ActionEligibility::Allowed {
+                assert_eq!(page.bookings[0].cancel_target.as_deref(), Some("safe"));
+            }
+        }
+    }
+}
+
 const SEAT_STATUS_CASES: &[SeatStatusCase] = &[
     (
         "字符串允许",

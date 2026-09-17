@@ -21,6 +21,22 @@ Future<FeatureResult> _loadLibbookFeature(
                     _field('空闲座位', '${item.freeNum}'),
                     _field('总座位', '${item.totalNum}'),
                     _field('楼层数', '${item.storeys.length}'),
+                    for (
+                      var index = 0;
+                      index < item.storeys.length;
+                      index++
+                    ) ...[
+                      _field('楼层 ${index + 1}', item.storeys[index].name),
+                      _field('楼层 ${index + 1} ID', item.storeys[index].id),
+                      _field(
+                        '楼层 ${index + 1} 空闲',
+                        '${item.storeys[index].freeNum}',
+                      ),
+                      _field(
+                        '楼层 ${index + 1} 总数',
+                        '${item.storeys[index].totalNum}',
+                      ),
+                    ],
                   ]),
                 ),
               )
@@ -81,6 +97,16 @@ Future<FeatureResult> _loadLibbookFeature(
                         ? null
                         : detail.timeSlots.map((slot) => slot.label).join('、'),
                   ),
+                  for (
+                    var index = 0;
+                    index < detail.timeSlots.length;
+                    index++
+                  ) ...[
+                    _field('时段 ${index + 1}', detail.timeSlots[index].label),
+                    _field('时段 ${index + 1} ID', detail.timeSlots[index].id),
+                    _field('时段 ${index + 1} 开始', detail.timeSlots[index].start),
+                    _field('时段 ${index + 1} 结束', detail.timeSlots[index].end),
+                  ],
                 ]),
               ),
             ],

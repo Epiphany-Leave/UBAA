@@ -4,6 +4,24 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::sync::MutexGuard;
 
+pub(super) fn lock_file(file: &File) -> std::io::Result<()> {
+    #[cfg(not(target_os = "android"))]
+    {
+        file.lock()
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        // Rust 1.95's File::lock is unsupported on Android.
+        loop {
+            match fs2::FileExt::lock_exclusive(file) {
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                result => return result,
+            }
+        }
+    }
+}
+
 pub(super) struct SessionFileLock<'a> {
     pub(super) _process_guard: MutexGuard<'a, ()>,
     pub(super) file: File,
@@ -11,6 +29,8 @@ pub(super) struct SessionFileLock<'a> {
 
 impl Drop for SessionFileLock<'_> {
     fn drop(&mut self) {
+        // Android releases flock when the owned descriptor is closed below.
+        #[cfg(not(target_os = "android"))]
         let _ = self.file.unlock();
     }
 }

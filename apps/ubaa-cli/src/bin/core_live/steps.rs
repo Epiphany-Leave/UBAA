@@ -81,12 +81,14 @@ async fn run(args: Args) -> Result<Evidence> {
     if args.feature == "auth" || args.feature == "user" {
         return Ok(evidence);
     }
-    if args.feature == "all"
-        || args.feature == "schedule"
-        || args.feature == "exam"
-        || args.feature == "grades"
-    {
-        run_schedule(&mut client, &mut evidence, &args.feature).await;
+    if args.feature == "all" || args.feature == "schedule" {
+        run_schedule(&mut client, &mut evidence).await;
+    }
+    if args.feature == "all" || args.feature == "exam" {
+        run_exam(&mut client, &mut evidence).await;
+    }
+    if args.feature == "all" || args.feature == "grades" {
+        run_grades(&mut client, &mut evidence).await;
     }
     if args.feature == "all" || args.feature == "classroom" {
         run_classroom(&mut client, &mut evidence, args.campus_id, &args.date).await;
@@ -129,6 +131,7 @@ fn block_after_auth_failure(evidence: &mut Evidence, feature: &str) {
         ("schedule", "weeks"),
         ("schedule", "current"),
         ("schedule", "today"),
+        ("exam", "terms"),
         ("exam", "arrangement"),
         ("grades", "query"),
         ("classroom", "search"),
@@ -163,10 +166,8 @@ fn block_after_auth_failure(evidence: &mut Evidence, feature: &str) {
         ("evaluation", "pending"),
     ];
     for &(operation_feature, operation) in ALL {
-        let selected = feature == "all"
-            || feature == operation_feature
-            || operation_feature == "auth"
-            || (matches!(feature, "exam" | "grades") && operation_feature == "schedule");
+        let selected =
+            feature == "all" || feature == operation_feature || operation_feature == "auth";
         if selected && !(operation_feature == "auth" && operation == "login") {
             evidence.blocked(operation_feature, operation, "authentication_failed");
         }
@@ -214,7 +215,7 @@ async fn run_user(client: &mut RouteClient, evidence: &mut Evidence, feature: &s
     }
 }
 
-async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence, feature: &str) {
+async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence) {
     let terms = match client.schedule_terms().await {
         Ok(result) => {
             evidence.pass("schedule", "terms", Some(result.data.len()));
@@ -225,12 +226,6 @@ async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence, feature
             evidence.blocked("schedule", "weeks", "terms_failed");
             evidence.blocked("schedule", "current", "terms_failed");
             evidence.blocked("schedule", "today", "terms_failed");
-            if feature == "all" || feature == "exam" {
-                evidence.blocked("exam", "arrangement", "terms_failed");
-            }
-            if feature == "all" || feature == "grades" {
-                evidence.blocked("grades", "query", "terms_failed");
-            }
             return;
         }
     };
@@ -243,12 +238,6 @@ async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence, feature
         evidence.blocked("schedule", "weeks", "no_term");
         evidence.blocked("schedule", "current", "no_term");
         evidence.blocked("schedule", "today", "no_term");
-        if feature == "all" || feature == "exam" {
-            evidence.blocked("exam", "arrangement", "no_term");
-        }
-        if feature == "all" || feature == "grades" {
-            evidence.blocked("grades", "query", "no_term");
-        }
         return;
     };
     let weeks = match client.schedule_weeks(&term).await {
@@ -260,12 +249,6 @@ async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence, feature
             evidence.fail("schedule", "weeks", error.code);
             evidence.blocked("schedule", "current", "weeks_failed");
             evidence.blocked("schedule", "today", "weeks_failed");
-            if feature == "all" || feature == "exam" {
-                evidence.blocked("exam", "arrangement", "weeks_failed");
-            }
-            if feature == "all" || feature == "grades" {
-                evidence.blocked("grades", "query", "weeks_failed");
-            }
             return;
         }
     };
@@ -281,17 +264,61 @@ async fn run_schedule(client: &mut RouteClient, evidence: &mut Evidence, feature
         Ok(result) => evidence.pass("schedule", "today", Some(result.data.len())),
         Err(error) => evidence.fail("schedule", "today", error.code),
     }
-    if feature == "all" || feature == "exam" {
-        match client.exam_arrangement(&term).await {
-            Ok(_) => evidence.pass("exam", "arrangement", None),
-            Err(error) => evidence.fail("exam", "arrangement", error.code),
+}
+
+async fn run_exam(client: &mut RouteClient, evidence: &mut Evidence) {
+    let terms = match client.exam_terms().await {
+        Ok(result) => {
+            evidence.pass("exam", "terms", Some(result.data.len()));
+            result.data
         }
+        Err(error) => {
+            evidence.fail("exam", "terms", error.code);
+            evidence.blocked("exam", "arrangement", "exam_terms_failed");
+            return;
+        }
+    };
+    let Some(term) = terms
+        .iter()
+        .find(|term| term.selected)
+        .or_else(|| terms.first())
+    else {
+        evidence.not_applicable("exam", "arrangement", "no_exam_term");
+        return;
+    };
+    match client.exam_arrangement(&term.item_code).await {
+        Ok(_) => evidence.pass("exam", "arrangement", None),
+        Err(error) => evidence.fail("exam", "arrangement", error.code),
     }
-    if feature == "all" || feature == "grades" {
-        match client.grades(&term).await {
-            Ok(_) => evidence.pass("grades", "query", None),
-            Err(error) => evidence.fail("grades", "query", error.code),
+}
+
+async fn run_grades(client: &mut RouteClient, evidence: &mut Evidence) {
+    match client.grade_overview().await {
+        Ok(result) if result.data.graduate => {
+            evidence.pass("grades", "query", Some(result.data.grades.len()));
         }
+        Ok(_) => {
+            let terms = match client.schedule_terms().await {
+                Ok(result) => result.data,
+                Err(error) => {
+                    evidence.fail("grades", "query", error.code);
+                    return;
+                }
+            };
+            let Some(term) = terms
+                .iter()
+                .find(|term| term.selected)
+                .or_else(|| terms.first())
+            else {
+                evidence.not_applicable("grades", "query", "no_grade_term");
+                return;
+            };
+            match client.grades(&term.item_code).await {
+                Ok(result) => evidence.pass("grades", "query", Some(result.data.grades.len())),
+                Err(error) => evidence.fail("grades", "query", error.code),
+            }
+        }
+        Err(error) => evidence.fail("grades", "query", error.code),
     }
 }
 

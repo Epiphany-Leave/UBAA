@@ -1,6 +1,24 @@
 part of '../ubaa_app_host_test.dart';
 
 void _registerCallbackTests() {
+  testWidgets('登录页离线课表只调用本地查询并禁用更新', (tester) async {
+    final backend = _RecordingBackend();
+    await tester.pumpWidget(UbaaAppHost(backend: backend));
+    await tester.pumpAndSettle();
+    backend.resetReadCalls();
+    await tester.tap(find.text('离线课表'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimetableView), findsOneWidget);
+    expect(backend.queryCalls, hasLength(1));
+    expect(backend.queryCalls.single.feature, FeatureId.schedule);
+    expect(backend.queryCalls.single.query.updateSchedule, isFalse);
+    expect(backend.loadedFeatures, isEmpty);
+    expect(backend.lastLogin, isNull);
+    expect(find.text('更新课表'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(UbaaLoginView), findsOneWidget);
+  });
   testWidgets('共享宿主完整连接登录页与主界面回调', (tester) async {
     final backend = _RecordingBackend();
     final vault = MemoryCredentialVault();

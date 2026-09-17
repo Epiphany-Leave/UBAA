@@ -253,6 +253,18 @@ fn 博雅选课资格无法证明课程未开课时为_unknown() {
 }
 
 #[test]
+fn 博雅详情允许旧版已确认的空当前人数与可选选课时间() {
+    let body = serde_json::json!({"status":"0", "data": {
+        "id":9, "courseName":"测试课程", "courseStartDate":"2099-09-20 10:00:00",
+        "courseMaxCount":20, "courseCurrentCount":null,
+        "courseSelectStartDate":null, "courseSelectEndDate":null
+    }})
+    .to_string();
+    let course = super::parser::parse_course_detail(&body).unwrap();
+    assert_eq!(course.select_eligibility, ActionEligibility::Allowed);
+}
+
+#[test]
 fn 博雅退选资格仅在已选且课程尚未开始时为_allowed() {
     let now = NaiveDateTime::parse_from_str("2026-09-04 12:00:00", "%Y-%m-%d %H:%M:%S")
         .expect("解析固定时间");
@@ -661,5 +673,44 @@ mod contract {
             Some(2)
         );
         assert!(parse_profile(r#"{"status":"1","msg":"失败"}"#).is_err());
+    }
+
+    #[test]
+    fn 博雅直连统计展开每个课程小类() {
+        let statistics = parse_statistics(
+            r#"{"status":"0","data":{"validCount":3,"statistical":{"1|博雅课程":{"2|德育":{"assessmentCount":2,"completeAssessmentCount":2},"3|美育":{"assessmentCount":2,"completeAssessmentCount":1}}}}}"#,
+        )
+        .unwrap();
+
+        assert_eq!(statistics.total_valid_count, Some(3));
+        assert_eq!(statistics.categories.len(), 2);
+        assert_eq!(
+            statistics.categories[0].category_name.as_deref(),
+            Some("博雅课程")
+        );
+        assert_eq!(
+            statistics.categories[0].sub_category_name.as_deref(),
+            Some("德育")
+        );
+        assert_eq!(statistics.categories[0].qualified, Some(true));
+        assert_eq!(
+            statistics.categories[1].sub_category_name.as_deref(),
+            Some("美育")
+        );
+        assert_eq!(statistics.categories[1].qualified, Some(false));
+    }
+
+    #[test]
+    fn 博雅详情缺少_selected_时遵循上游未选语义() {
+        let course = parse_course_detail(
+            r#"{"status":"0","data":{"id":9,"courseName":"可选课程","courseStartDate":"2100-01-01 00:00:00","courseSelectStartDate":"2000-01-01 00:00:00","courseSelectEndDate":"2099-12-31 23:59:59","courseMaxCount":20,"courseCurrentCount":5}}"#,
+        )
+        .unwrap();
+
+        assert_eq!(course.selected, Some(false));
+        assert_eq!(
+            course.select_eligibility,
+            crate::domain::ActionEligibility::Allowed
+        );
     }
 }

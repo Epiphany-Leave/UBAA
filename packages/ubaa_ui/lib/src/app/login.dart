@@ -20,6 +20,7 @@ class UbaaLoginView extends StatefulWidget {
     required this.onRoutePolicyChanged,
     required this.onSubmit,
     this.onReadDiagnostics,
+    this.onOfflineSchedule,
     super.key,
   });
 
@@ -40,6 +41,7 @@ class UbaaLoginView extends StatefulWidget {
   final ValueChanged<RoutePolicy> onRoutePolicyChanged;
   final VoidCallback onSubmit;
   final String Function()? onReadDiagnostics;
+  final VoidCallback? onOfflineSchedule;
 
   @override
   State<UbaaLoginView> createState() => _UbaaLoginViewState();
@@ -178,6 +180,14 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                               : const Text('登录'),
                         ),
                       ),
+                      if (widget.onOfflineSchedule != null)
+                        TextButton.icon(
+                          onPressed: widget.isLoading
+                              ? null
+                              : widget.onOfflineSchedule,
+                          icon: const Icon(Icons.calendar_month),
+                          label: const Text('离线课表'),
+                        ),
                       if (widget.error case final error?) ...<Widget>[
                         const SizedBox(height: 16),
                         FriendlyErrorCard(error: error),

@@ -147,11 +147,27 @@ pub struct CgyyReservationResult {
 }
 
 /// 场馆门锁码的安全摘要。
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CgyyLockCode {
-    /// 上游是否返回了可用的锁码数据；具体锁码永不离开 Core。
+    /// 普通 CLI 序列化仅包含可用性；显式查看密码通过 typed bridge 提供。
     pub available: bool,
+    #[serde(skip)]
+    pub lock_code: Option<String>,
+    #[serde(skip)]
+    pub due_date: Option<String>,
+    #[serde(skip)]
+    pub room: Option<String>,
+    #[serde(skip)]
+    pub reservation_time: Option<String>,
+}
+
+impl std::fmt::Debug for CgyyLockCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CgyyLockCode")
+            .field("available", &self.available)
+            .finish_non_exhaustive()
+    }
 }
 
 /// 场馆预约提交时选择的空间及时段。

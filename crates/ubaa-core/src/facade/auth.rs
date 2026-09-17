@@ -42,6 +42,9 @@ impl UbaaClient {
     /// 双路线会话所有权或协调状态发生冲突时返回错误；单路线认证失败保留在返回结果中。
     pub async fn login(&mut self, input: DualLoginInput) -> Result<LoginOutcome> {
         self.guard_latest_session_ownership()?;
+        if let Some(dir) = &self.config_dir {
+            crate::session::schedule_cache::begin_login(dir, input.username.trim())?;
+        }
         let mut routes = Vec::with_capacity(2);
         let mut profile = None;
         for route in [ConnectionMode::Direct, ConnectionMode::WebVpn] {
@@ -73,6 +76,11 @@ impl UbaaClient {
             1 => LoginReadiness::Partial,
             _ => LoginReadiness::NoneReady,
         };
+        if ready > 0
+            && let Some(dir) = &self.config_dir
+        {
+            crate::session::schedule_cache::select_owner(dir, Some(input.username.trim()))?;
+        }
         Ok(LoginOutcome {
             readiness,
             routes: fixed_route_results(routes),
@@ -87,6 +95,9 @@ impl UbaaClient {
     /// 会话所有权已失效或无法原子清理持久化槽位时返回错误。
     pub async fn logout(&mut self) -> Result<()> {
         self.guard_latest_session_ownership()?;
+        if let Some(dir) = &self.config_dir {
+            crate::session::schedule_cache::select_owner(dir, None)?;
+        }
         self.direct_auth
             .remote_logout(&mut self.direct_runtime)
             .await;
@@ -139,6 +150,16 @@ impl UbaaClient {
             .iter()
             .filter(|route| route.state == RouteLoginState::Ready)
             .count();
+        if ready > 0
+            && let Some(dir) = &self.config_dir
+        {
+            let owner = profile
+                .as_ref()
+                .and_then(|user| user.username.as_deref())
+                .map(str::trim)
+                .filter(|name| !name.trim().is_empty());
+            crate::session::schedule_cache::select_owner(dir, owner)?;
+        }
         Ok(LoginOutcome {
             readiness: match ready {
                 2 => LoginReadiness::AllReady,

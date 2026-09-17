@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::domain::{Grade, GradeData};
+use crate::domain::{Grade, GradeData, GradeOverview};
 use crate::error::{ErrorCode, ErrorKind, Result, UbaaError};
 
 /// 成绩应用页面和查询地址。
@@ -93,6 +93,7 @@ pub fn parse_scores(term_code: &str, body: &str) -> Result<GradeData> {
                 course_type: clean(course.kclx),
                 score_type: clean(course.fslx),
                 term_code: Some(term_code.to_string()),
+                ..Grade::default()
             })
             .collect(),
     })
@@ -103,6 +104,17 @@ pub(crate) async fn get_grades(
     runtime: &mut crate::runtime::ClientRuntime,
     term_code: &str,
 ) -> Result<GradeData> {
+    if super::schedule::graduate_term(runtime, term_code) {
+        let overview = super::gsmis::grades(runtime).await?;
+        return Ok(GradeData {
+            term_code: term_code.into(),
+            grades: overview
+                .grades
+                .into_iter()
+                .filter(|g| g.term_code.as_deref() == Some(term_code))
+                .collect(),
+        });
+    }
     let term = parse_term_code(term_code)?;
     let page_url = runtime.url(GRADES_URL)?;
     let page = super::get_with_redirects(
@@ -131,6 +143,29 @@ pub(crate) async fn get_grades(
     .await?;
     super::check_response(&response, "grades")?;
     parse_scores(term_code, &super::body(&response))
+}
+
+pub(crate) async fn get_overview(
+    runtime: &mut crate::runtime::ClientRuntime,
+) -> Result<GradeOverview> {
+    super::require_session(runtime)?;
+    match super::schedule::graduate_account(runtime) {
+        Some(true) => return super::gsmis::grades(runtime).await,
+        Some(false) => return Ok(GradeOverview::default()),
+        None => {}
+    }
+    let result = match super::schedule::ensure_undergraduate_portal(runtime).await {
+        Ok(()) => super::schedule::get_undergraduate_terms(runtime).await,
+        Err(error) => Err(error),
+    };
+    match result {
+        Ok(terms) if terms.is_empty() => super::gsmis::grades(runtime).await,
+        Ok(_) => Ok(GradeOverview::default()),
+        Err(error) if super::gsmis::can_fallback(&error) => super::gsmis::grades(runtime)
+            .await
+            .map_err(|e| super::gsmis::fallback_error(&error, &e)),
+        Err(error) => Err(error),
+    }
 }
 
 fn value_text(value: Option<Value>) -> Option<String> {

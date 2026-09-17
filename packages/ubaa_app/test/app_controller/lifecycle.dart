@@ -1,6 +1,19 @@
 part of '../app_controller_test.dart';
 
 void _registerLifecycleTests() {
+  test('会话检查超时后回到登录页', () async {
+    final controller = AppController(
+      backend: _DelayedInitializeBackend(),
+      sessionCheckTimeout: Duration.zero,
+    );
+
+    await controller.initialize();
+
+    expect(controller.phase, AppPhase.login);
+    expect(controller.error?.code, UbaaErrorCode.timeout);
+    controller.dispose();
+  });
+
   test('宿主重建 backend 后重新读取认证和路线状态', () async {
     final first = _RebuildBackend(
       signedIn: false,

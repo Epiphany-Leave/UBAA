@@ -524,5 +524,10 @@ mod contract {
         let result =
             parse_lock_code(r#"{"code":200,"data":{"orderId":7,"lockCode":"1234"}}"#).unwrap();
         assert!(result.available);
+        assert_eq!(result.lock_code.as_deref(), Some("1234"));
+        assert!(!format!("{result:?}").contains("1234"));
+        let result = parse_lock_code(r#"{"code":200,"data":{"qrCode":"654321","dueDate":"2026-09-14 12:00","orderView":{"venueName":"主楼","siteName":"二层","venueSpaceName":"201","reservationDateDetail":"10:00-11:00"}}}"#).unwrap();
+        assert_eq!(result.lock_code.as_deref(), Some("654321"));
+        assert_eq!(result.room.as_deref(), Some("主楼 二层 201"));
     }
 }

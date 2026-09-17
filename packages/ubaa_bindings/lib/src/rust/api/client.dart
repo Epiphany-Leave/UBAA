@@ -97,6 +97,10 @@ abstract class BridgeClient implements RustOpaqueInterface {
 
   Future<BridgeRoutedExamArrangement> examArrangement({required String term});
 
+  Future<BridgeRoutedTerms> examTerms();
+
+  Future<BridgeRoutedGradeOverview> gradeOverview();
+
   Future<BridgeRoutedGrades> grades({required String term});
 
   Future<BridgeRoutedJudgeAssignmentDetail> judgeAssignment({
@@ -211,6 +215,8 @@ abstract class BridgeClient implements RustOpaqueInterface {
   /// 客户端已销毁时返回安全错误。
   Future<BridgeRouteSettings> routeSettings();
 
+  Future<BridgeSavedSchedule> savedSchedule();
+
   Future<BridgeRoutedTerms> scheduleTerms();
 
   Future<BridgeRoutedTodayClasses> scheduleToday();
@@ -238,6 +244,8 @@ abstract class BridgeClient implements RustOpaqueInterface {
   });
 
   Future<BridgeRoutedSpocAssignments> spocAssignments();
+
+  Future<BridgeSavedSchedule> updateSavedSchedule({String? term});
 
   /// 获取必要的用户资料。
   ///
@@ -323,6 +331,7 @@ enum BridgeErrorCode {
   intentExpired,
   operationConflict,
   outcomeUnknown,
+  unsupported,
 }
 
 /// bridge 对外的安全错误类别。

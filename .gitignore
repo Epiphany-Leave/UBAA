@@ -7,6 +7,8 @@
 /examples/
 
 # Rust output
+/output/
+**/test/failures/
 /target/
 
 # Flutter/OpenHarmony local build metadata

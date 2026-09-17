@@ -32,6 +32,7 @@ void _registerGoldenTests() {
       MaterialApp(
         theme: UbaaTheme.light(),
         home: coordinatedShell(
+          initialTab: 0,
           user: const UserSummary(username: 'student', displayName: '测试同学'),
           snapshots: snapshots,
           routePolicy: RoutePolicy.auto,
@@ -180,6 +181,7 @@ void _registerGoldenTests() {
           MaterialApp(
             theme: dark ? UbaaTheme.dark() : UbaaTheme.light(),
             home: coordinatedShell(
+              initialTab: 0,
               key: ValueKey<String>('${layout.name}-$themeName'),
               user: const UserSummary(username: 'student', displayName: '测试同学'),
               snapshots: snapshots,

@@ -63,7 +63,7 @@ prepare/commit 都 fresh 读取同 ID 详情并以上海时区复核四小时截
 双回读固定 intent 原路线，只消费本次局部 `cancelledTarget` 证明，不从旧 snapshot 或展示字段推断。
 
 Phase 11I 的 Ygdk typed 提交继续提升为 CLI schema v9 / bridge v8；Phase 11J 的 Evaluation typed
-批量提交与逐项四态结果提升为当前 CLI schema v10 / bridge v9。Phase 11K 的唯一写入协调器和其后
+批量提交与逐项四态结果提升为当时的 CLI schema v10 / bridge v9。Phase 11K 的唯一写入协调器和其后
 UI/Core 机械整理保留该版本、生成绑定及 golden；具体来源与阶段证据见 [实施账本](../superpowers/plans/2026-09-03-code-organization.md)。
 
 候选 `d43c177` 虽通过 19 项本地门禁和五平台原生 CI，但合同 CI 暴露工具链输出 Broken pipe 与 Windows
@@ -268,7 +268,7 @@ UBAA/
 │   │   │   ├── io/
 │   │   │   │   ├── mod.rs
 │   │   │   │   ├── input.rs
-│   │   │   │   ├── schema.rs               # CLI envelope 所有者，当前 schema v10
+│   │   │   │   ├── schema.rs               # CLI envelope 所有者，当前 schema v11
 │   │   │   │   ├── human.rs
 │   │   │   │   ├── error.rs                # 稳定错误 payload 与名称投影
 │   │   │   │   ├── render.rs               # stdout/stderr 渲染与 Core 错误投影

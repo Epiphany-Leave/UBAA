@@ -1,5 +1,64 @@
 # 协议来源对照矩阵
 
+## 2026-09-17 Android 打卡照片入口
+
+参考下载上游 platform/media.dart 的照片捕获与 typed 字节适配，保持现有 Core 打卡业务不变。本地缺少 Android `cn.edu.buaa.ubaa/platform` 照片原生实现，本轮用系统相机 ACTION_IMAGE_CAPTURE、相册 ACTION_GET_CONTENT 和仅共享 capture 缓存目录的 FileProvider 补齐。用户点击已有选图入口后选择“拍照/相册”；照片限制 10 MiB，仅返回字节、固定展示名和允许 MIME，不传文件路径。系统相机委托不声明 CAMERA 权限；相册走用户选择的单个 URI，不申请图库全量权限。取消与失败分开处理，缓存照片在返回/取消/销毁时清理；拍摄、预览不提交业务请求。其他平台仍按既有能力探测，不宣称原生相机已适配。冻结来源认证、Cookie、打卡参数与写操作确认均不变。
+
+## 2026-09-17 阳光首页提醒开关
+
+参考上游 domain/home.dart、app/shell.dart 与 platform/reminders.dart 的自选提醒和账号隔离持久化。本轮仅迁移首页提醒开关与跳转；不复制上游 UI 中固定周次数 4、学期次数 16 的完成推断，也不新增学校业务规则。只在私有目录保存每账号一枚开关标记，不存打卡记录、Cookie 或凭据。提醒文案明确为用户自选的常驻提示，完成情况以官方查询为准；自动按周/学期关闭和系统通知不在此增量。冻结来源的学校接口、认证、路由、解析和写入流程保持现状，`just refs` 通过。
+
+## 2026-09-17 本次会话成绩变化提示
+
+参考上游 `controller/grade_score_watch.dart` 与 UI `academic/grade_notice.dart` 的首次不提示、失败保留基线、查看/忽略及账号隔离。当前小步实现仅比较已有成功默认成绩查询的展示字符串，学期和课程号均明确、无重复且同路线时才比较；筛选查询不进入基线。不额外读取成绩、不落盘、不跨重启跟踪，不采用上游额外统计计算。冻结来源的认证、接口、参数、Cookie、Core 分流、解析和 GPA 规则均不改变；提示不是成绩是否合格等业务判断。缺少课程身份时跳过提示。跨重启的完整上游监控尚未迁移。
+
+## 2026-09-17 成绩卡片增量
+
+参考下载上游 `UBAA-ubaa2V1.1/packages/ubaa_ui/lib/src/features/academic/grade_cards.dart` 的摘要数字布局和点击详情。复用本地 `read/academic.dart` 已有白名单字段、搜索和 `_AcademicDetailCard`。所有成绩、绩点、折算分和统计值保持 Core 结果，不复制上游 UI 计算规则、不新增 GPA 或学分推导。冻结来源的 CAS、Cookie、路由、HTTP 参数、解析、缓存及错误处理均不变。本轮 `just refs` 通过，界面测试以无个人信息的文字成绩和空统计验证。
+
+## 2026-09-17 关于页增量
+
+参考下载上游 `UBAA-ubaa2V1.1/packages/ubaa_ui/lib/src/app/about.dart` 与 `packages/ubaa_platform/lib/src/app_information.dart` 的版本、项目链接及失败回退体验。复用 Flutter LicensePage，Android 用系统包信息和 ACTION_VIEW；未引入上游 package_info_plus/url_launcher 依赖。此变更不涉及冻结来源的学校协议：CAS、跳转、Cookie、HTTP 参数、加密、业务解析和缓存全部保持现有实现，不新增 Core/Bridge 业务入口。其他平台版本读取和原生链接打开暂未适配，UI 明确回退。`just refs` 本轮通过。
+
+## 2026-09-15 图书馆取消入口
+
+用户确认图书馆预约成功，但“预约成功”记录没有取消入口。精确状态名称回退及来源边界见[预约证据](evidence/2026-09-14-reservations.md)。保留 Rust Core 统一判断和取消前重新核对，不在 UI 放宽资格。
+
+## 2026-09-11 成绩和考试的空本科校历分流
+
+用户确认上一轮 GSMIS 课表恢复。沿用上节冻结来源比较及 UBAA-PR `LocalScheduleApi.withScheduleAccess`、`LocalGradeApi.getOverview` 的业务能力分流原则：本科门户 JSON 外形不能单独证明该账号可用本科业务。本轮考试在本科学期为空时查询独立的 GSMIS 考试学期；成绩在门户探测成功后再确认本科学期非空，否则查询 GSMIS 成绩总览。不以空成绩判断学籍，不改变 GSMIS URL、表单、头、Cookie、解析和 GPA 规则，不新增身份缓存。脱敏测试先复现空考试学期导致失败，同时覆盖非空本科学期保留原路线、研究生真实接口空响应与空成绩统计；真实空结果仍由用户在 Pixel 8 验证。非空研究生考试明细依然没有已验证字段样本。
+
+## 2026-09-11 空学期导入回退
+
+Pixel 8 更新课表显示 InvalidInput 对应提示，现有连接日志只观察到本科门户；日志不足以证明其响应正文。对照 UBAA-PR `LocalScheduleApiBackend.importSemester/withScheduleAccess`：本科整学期导入失败仍尝试 GSMIS。UBAA2 在本科返回成功的空学期列表时提前以 InvalidInput 退出，新增脱敏行为测试已复现该失败。修复仅在学期列表为空且未指定本科格式学期时尝试现有 GSMIS 学期接口；不改变 URL、请求头、Cookie、解析与缓存提交方式。两冻结参考没有 GSMIS 协议，继续沿用下文已记录的研究生快照证据。此次 `just refs` 因 `ubaa_old` 工作树不干净未通过，未清理或改写参考目录。真实恢复情况等待本轮 APK 验证。
+
+## 2026-09-10 GSMIS 研究生迁移（实现前对照）
+
+新增来源为仓库外 `reference-snapshots/graduate-2026-09-10`，由 UBAA-PR
+`fdd85993b807e7a3977cbae5fe279d15f52f1c75` 加未提交源码快照组成，文件 SHA256 在该目录 manifest.json。
+不读取/提交个人响应。用户已确认旧 APK 课表和空成绩/空考试可用；非空成绩只有合成测试，非空考试无协议证据。
+
+两冻结来源逐项检查：旧版 `api/feature/{ScheduleApi,GradeApi}.kt`、`api/local/{LocalScheduleApi,LocalGradeApi,LocalConnectionAuth}.kt`、`model/dto/{Schedule,Grade,Exam}.kt` 及对应 Backend/Cookie/Auth 测试；示例 `api/aas/{core,opt,data}.rs`、`api/app/{core,opt,data}.rs`、`request.rs`、`store/{cookies,cred}.rs`、`error.rs`。它们没有以下 GSMIS 课表/成绩/考试协议（旧 server 的 getUserInfo 只是门户探测，非同协议）。故每行 URL、参数、DTO、密码/签名、错误均不得由这些本科接口类比推导。既有本科行为维持当前 Core 契约。
+
+共同会话/传输决策：快照 `GraduateScheduleUpstream.kt` 和 `GsmisAcademicUpstream.kt` 都 GET 对应应用入口，使用主认证会话跟随学校重定向，不硬编码 CAS service、v、_yhz 或浏览器 Cookie；本次沿用 Core 有界重定向、TLS 校验、按模式/域/路径 Cookie 隔离，仅加入 gsmis 主机。最终 SSO URL、CAS title/execution 或401为认证失败；非200保留状态/阶段，不回传正文。无新增加密、签名常量。GSMIS 查询 XHR 头为 `Accept: application/json, text/javascript, */*; q=0.01`、`X-Requested-With: XMLHttpRequest`、`Referer: <转换后应用入口>`；POST 为表单，课表学期例外为空 body 无 Content-Type（与快照一致）。直连和WebVPN都转换 URL/Referer。读取串行完成后才返回；不新增跨账号持久缓存，不改凭据仓。
+
+| 操作 | 快照请求/业务入口 | 字段、完整性和错误 | 缓存/并发/来源差异 |
+|---|---|---|---|
+| 课表学期 | GET `https://gsmis.buaa.edu.cn/gsapp/sys/wdkbapp/*default/index.do`，POST `/modules/xskcb/kfdxnxqcx.do` 无负载 | code=0,datas.kfdxnxqcx.rows/totalSize；XNXQDM、XNXQDM_DISPLAY；完整、代码合法、倒序 | 两冻结来源无同协议；不借本科学期代码；仅成功业务证明能力 |
+| 整学期课表/周/今日 | 同入口，POST `/bykb/loadXskbData.do`，`ZC=&XNXQDM=<term>&XH=&XQDM=` | code=1；rwList(XNXQDM,BJDM,SCSKRQ)、jgList(BJDM,KCDM,KCMC,XQ,ZCBH,KSJCDM,JSJCDM,JCFADM,JASMC,JGJSXM,ZCMC)、jcfaList.skjcList(JCFADM,DM,KSSJ,JSSJ)。校验学期、课程关联、唯一节次、位图、日期对应周一起点；不能猜开学日期。仅同班/教师/地点/位图/方案的相邻节次合并；全部有效节次构建时间轴 | 快照 GsmisSchedule.kt/GraduateSchedule.kt 及测试；两冻结无同协议。不迁移YJSXK JSON脚本修复；位图仅表示可查周范围；今日使用上海日期 |
+| 成绩全量/学期 | GET `https://gsmis.buaa.edu.cn/gsapp/sys/wdcjapp/*default/index.do`，POST `/modules/wdcj/xscjcx.do`，`pageSize=12&pageNumber=<1..>` | code=0,datas.xscjcx.{rows,totalSize,pageNumber}；总数0..10000且不变、页码一致、每页<=12、WID唯一，不返回部分结果；学期来自成绩XNXQDM/XNXQDM_DISPLAY | 快照GsmisAcademicUpstream.kt/GsmisAcademicTest.kt；两冻结无同协议。空成绩不调用课表或字典，历史成绩不受课表开放学期约束 |
+| 成绩字典/GPA | 同成绩入口，非空时POST `/modules/wdcj/cjfzdjcx.do` 空表单 | code=0,datas.cjfzdjcx rows/totalSize；CJFZDM+DM/MC匹配，DYJDZ与DYBFZCJ取有效范围。百分制<60为0，否则4-3*(100-score)^2/1600；五级制用字典。SFYX=0、T/EX、非0/1成绩制不入GPA，未知值不冒充0。正学分加权，GPA与均分分母独立，空分母null | 原本科计算不变；特殊培养环节不根据课程名猜；非空仍需真实样本验证。字典匹配不唯一则不猜其值 |
+| 考试学期 | GET `https://gsmis.buaa.edu.cn/gsapp/sys/wdksapp/*default/index.do`，POST `/modules/ksxxck/getXnxqList.do` 空表单 | datas数组，DM/MC/SFDQXQ，学期合法且唯一，倒序 | 两冻结无同协议；与课表学期独立 |
+| 考试列表 | 同考试入口，POST `/modules/ksxxck/getWdksxx.do`，`xnxqdm=<term>` | success=true，countKs/countKcks/countJk非负且必需；全0为空；任一正数明确unsupported并提示官网，绝不伪装空 | 两冻结无同协议；非空明细证据不足；不推测课程/时间/考场字段 |
+
+能力分流不推断学号：优先现有本科门户；有本地主会话时，入口/业务的远程认证、网络、上游、解析失败均可尝试对应 GSMIS 操作，只有该业务成功才返回数据，403本身不是身份。失败保留 GSMIS 错误和本科错误代码。本地Input/Internal不触发后备。显式研究生学期格式为四位年份+1/2/3，仅作协议参数选择，非学籍证明；本科形状的显式学期不擅自映射成研究生学期。不缓存研究生身份（避免账号/模式/新会话残留）；注销/模式隔离继续由 Core runtime 管理。曾评估仅PermissionDenied后备，但复核快照LocalScheduleApi.kt:180-218明确支持本科服务失败后验证真实GSMIS能力，故保留能力后备；403/500+GSMIS成功测试先RED再实现。
+
+公开合同：CLI schema v11 / Bridge v10 承载 GradeOverview及Core全局/分学期统计、Grade研究生标识/学期名/平均分、WeeklySchedule完整sectionTimes；不改配置/会话文件版本。首次RED：6个GSMIS行为测试0通过6失败（学期/周/考试PermissionDenied，成绩InvalidInput，时间轴字段丢失）。首轮实现后focused 10通过0失败；真实直连/WebVPN仍未执行。
+
+门户资料成功条件同时恢复冻结LocalScheduleApi的JSON外形检查：HTTP200 HTML不能当作本科成功，从而错误跳过研究生成绩入口；新增grade_overview HTML门户测试观察graduate=false断言失败后修复。此检查不推断学籍，仍由实际业务成功决定可用能力。
+
+本阶段初次离线检查：Core启用test-contract的测试413通过/0失败/0忽略（232 unit、180 integration、1 doc）；Core全部targets启用test-contract且拒绝warning的Clippy通过。该次调用未显式锁定依赖，最终集成须按仓库门禁使用locked参数重新验证，以主线程最终证据为准。14个GSMIS测试覆盖请求头/空body与表单、直连/WebVPN入口重定向和Cookie路径不扩大、分页缺页/总数变化/重复标识、GPA分母、校历冲突、完整时间轴、空考试与非空拒绝。本次无真实上游或模拟器验证，不能以此替代上线验收。
+
 更新日期：2026-09-04
 
 本文件逐操作审计行为。`旧版` 指冻结的 `ubaa_old/` 提交
@@ -203,7 +262,7 @@ JSON。详情测试保留上游 ID 校验、摘要回退、可选提交信息、
 
 | 启动/服务 URL | 重定向/最终 URL | Cookie/会话范围 | 方法与精确参数 | 请求头/正文编码 | 加密常量 | DTO/解析字段 | 缓存/并发 | 错误/退出语义 |
 |---|---|---|---|---|---|---|---|---|
-| **旧版：**宿主 UI 选择 `ConnectionMode`，没有等价 UBAA2 CLI/配置。**示例：**只有库上下文，没有 CLI/配置/schema。**决策：**上游 URL 不适用，普通路由由聚合 Core facade 负责。 | **旧版/示例：**没有等价 CLI 跳转合同。**决策：**宿主只接收 facade 结果。 | **旧版：**按模式保存设置，切换会清会话。**示例：**调用方管理 `cookies.json`/`cred.json`。**决策：**Core 加载严格的 `config.toml` 版本 1 和 schema-v2 双路线 `session.json`；CLI 不读取存储内部。 | **旧版/示例：**无等价命令。**决策：**CLI 解析文档命令/参数，调用不带 `ConnectionMode` 的 facade 并负责渲染；隐藏模式仅用于诊断/测试。 | **旧版/示例：**无信封。**决策：**stdout 只输出一个 JSON 值，诊断仅写 stderr，不输出敏感值或原始上游数据。 | **旧版/示例：**不适用。**决策：**当前 CLI envelope 只使用 schema v10；配置/会话磁盘版本独立。历史 v3 显式承载 Bykc 可空 `checkin`、三态签到/签退资格和 `outcome_unknown`；v4 再承载 Signin 可空 `signStatus`、三态资格/目标与确定业务结果；v5 承载 LibBook seat 可空整数 `status`、typed `reserveEligibility/reserveTarget` 和确定的 `LibBookReserveResult`；v6 再承载 LibBook booking 可空整数 `status`、typed `cancelEligibility/cancelTarget` 与取消结果；v7 承载 Cgyy 可空 canonical 状态、typed `reservationEligibility/reservationTarget` 与安全预约结果/收据；v8 承载 Cgyy typed `cancelEligibility/cancelTarget/cancelledTarget` 与固定安全取消结果；v9 承载 Ygdk typed `submitEligibility/submitTarget`、完整请求、安全结果和 caller-pinned 回读；v10 再承载 Evaluation typed `submitEligibility/submitTarget`、仅含 targets 的请求、四态批量结果与 caller-pinned 回读，均不在旧版本号下静默改变合同。聚合路线数组固定 Direct 后 WebVPN；`all_ready`/`partial` 必须有完整资料，`none_ready` 禁止存在资料。路线错误只含稳定安全错误，不含挑战/图片字段或验证码错误码。单路线信封不能带聚合字段，解析前错误只带功能名。 | **旧版：**全局模式/运行时。**示例：**调用方拥有上下文。**决策：**配置、探测缓存、路由、会话和业务状态由 facade 拥有；CLI 不持有路由缓存。配置写入拒绝符号链接/非普通文件并使用唯一原子临时文件。 | **旧版/示例：**没有等价退出分类。**决策：**使用稳定退出码 0/2/3/5/6/7；新配置目录支持 JSON 登录；交互验证页映射为 `upstream_changed`（退出 6），缺少本地用户/功能会话时在网络前失败。
+| **旧版：**宿主 UI 选择 `ConnectionMode`，没有等价 UBAA2 CLI/配置。**示例：**只有库上下文，没有 CLI/配置/schema。**决策：**上游 URL 不适用，普通路由由聚合 Core facade 负责。 | **旧版/示例：**没有等价 CLI 跳转合同。**决策：**宿主只接收 facade 结果。 | **旧版：**按模式保存设置，切换会清会话。**示例：**调用方管理 `cookies.json`/`cred.json`。**决策：**Core 加载严格的 `config.toml` 版本 1 和 schema-v2 双路线 `session.json`；CLI 不读取存储内部。 | **旧版/示例：**无等价命令。**决策：**CLI 解析文档命令/参数，调用不带 `ConnectionMode` 的 facade 并负责渲染；隐藏模式仅用于诊断/测试。 | **旧版/示例：**无信封。**决策：**stdout 只输出一个 JSON 值，诊断仅写 stderr，不输出敏感值或原始上游数据。 | **旧版/示例：**不适用。**决策：**当前 CLI envelope 只使用 schema v11；配置/会话磁盘版本独立。历史 v3 显式承载 Bykc 可空 `checkin`、三态签到/签退资格和 `outcome_unknown`；v4 再承载 Signin 可空 `signStatus`、三态资格/目标与确定业务结果；v5 承载 LibBook seat 可空整数 `status`、typed `reserveEligibility/reserveTarget` 和确定的 `LibBookReserveResult`；v6 再承载 LibBook booking 可空整数 `status`、typed `cancelEligibility/cancelTarget` 与取消结果；v7 承载 Cgyy 可空 canonical 状态、typed `reservationEligibility/reservationTarget` 与安全预约结果/收据；v8 承载 Cgyy typed `cancelEligibility/cancelTarget/cancelledTarget` 与固定安全取消结果；v9 承载 Ygdk typed `submitEligibility/submitTarget`、完整请求、安全结果和 caller-pinned 回读；v10 再承载 Evaluation typed `submitEligibility/submitTarget`、仅含 targets 的请求、四态批量结果与 caller-pinned 回读，均不在旧版本号下静默改变合同。聚合路线数组固定 Direct 后 WebVPN；`all_ready`/`partial` 必须有完整资料，`none_ready` 禁止存在资料。路线错误只含稳定安全错误，不含挑战/图片字段或验证码错误码。单路线信封不能带聚合字段，解析前错误只带功能名。 | **旧版：**全局模式/运行时。**示例：**调用方拥有上下文。**决策：**配置、探测缓存、路由、会话和业务状态由 facade 拥有；CLI 不持有路由缓存。配置写入拒绝符号链接/非普通文件并使用唯一原子临时文件。 | **旧版/示例：**没有等价退出分类。**决策：**使用稳定退出码 0/2/3/5/6/7；新配置目录支持 JSON 登录；交互验证页映射为 `upstream_changed`（退出 6），缺少本地用户/功能会话时在网络前失败。
 
 2026-08-24 的配置持久化证据：Unix 测试证明加载和保存会拒绝符号链接 `config.toml`，不会读取
 或改变其目标。八个并发保存使用唯一独占临时文件发布一份完整可解析配置，不遗留临时文件，
@@ -656,3 +715,24 @@ Ygdk 原语文本补充：冻结 `LocalYgdkApi.kt` 的 `JsonObject.string` 使�
 场馆订单同时将冻结状态码映射为公开的“订单状态说明/审核状态说明”，只用于用户理解当前状态；原始内部字段仍不跨 facade。
 
 Evaluation 原语文本补充：冻结评教本地实现同样通过 `JsonPrimitive.contentOrNull` 读取文本字段；Core `string` 现支持字符串、整数、浮点和布尔原语，避免合法的非字符串课程/问卷字段被误判为缺失。
+# 2026-09-14 预约页面对照补充
+
+博雅空当前人数、可选选课窗口，以及研讨室密码字段的来源、保持不变的协议边界与验证限制，见 [预约对照记录](evidence/2026-09-14-reservations.md)。
+# 2026-09-15 学业身份与缓存修复
+
+用户提供分类规则：8 位数字本科；大写字母前缀加数字为研究生；9 位继续教育及其他格式未知。以用户中心返回的 school_id（其次 username）为准。生产 facade 的学业入口先确认身份；重启后读取一次官方资料恢复，未知学号返回明确错误，不请求任一教务系统。已识别账号固定使用对应教务系统，不用网络错误改变身份。身份不在 Dart 重复实现。旧内部能力探测保留给历史测试入口，生产 facade 不允许未知身份到达这些分支。
+
+对照 ubaa_old/shared/src/commonMain/kotlin/cn/edu/ubaa/api/local/LocalScheduleApi.kt、model/dto/Schedule.kt 与 examples/buaa-api/src/api/aas/data.rs：周课表使用 datas.arrangedList，datas.code 未定义为学期；缓存归属由请求学期及 Week.term 校验。旧 DTO 日期是字符串；缓存兼容纯日期和完整日期时间，统一为校园日历日期。上游 URL、CAS/service、跳转、Cookie、方法、参数、头、编码、加密及错误协议均不改变。两份参考没有本轮学号分流规则，分类依据为本轮用户指令。缓存完整写入、失败保留旧值及账号隔离保持原行为；首次打开周课表无缓存时进行一次导入，首页继续离线读取。
+
+引用检查：just refs 报告 ubaa_old 工作树已有修改；未重置、更新或提交该目录。本轮只读取参考，未把它视为干净冻结快照。
+# 2026-09-15 学号大小写与地图交互
+
+用户补充研究生学号字母可能小写或混合大小写；Core 分类只改为识别 ASCII 字母前缀，不改登录提交的用户名、密码、URL、Cookie 或缓存账号键。8 位数字本科与未知格式处理不变。测试覆盖小写/混合大小写、官方 schoolid 优先于 username 及恢复会话后固定 GSMIS 路线。
+
+UI 对照本地下载快照 UBAA-ubaa2V1.1/packages/ubaa_ui/lib/src/features/libbook/area_map.dart：当前项目已有地图入口、29 张静态资源、手势缩放与重置，因此仅迁移缺少的按钮缩放、触控板缩放、静态图说明及图像语义标签；保留现有全屏布局、资源白名单与预约流程。本轮无新依赖、协议或桥接变更。refs 本次重新检查通过两份冻结引用。
+# 2026-09-16 考试时间线展示
+
+参考下载快照 UBAA-ubaa2V1.1/packages/ubaa_ui/lib/src/features/academic/exam_timeline.dart，迁移时间线/紧凑卡片/详情交互。复用本地 FeatureDetail、_academicField、_AcademicDetailCard 与现有搜索；不引入上游较旧的 Bridge DTO。上游按 ExamPresentation 自动划分结束状态，本轮没有迁移这个数据模型或规则；保留 Core 给出的安排状态。此轮纯展示，不改变协议、查询参数或解析规则。
+# 2026-09-16 阳光打卡摘要和记录展示
+
+参考 UBAA-ubaa2V1.1/packages/ubaa_ui/lib/src/features/ygdk/summary.dart、record_card.dart。使用当前 BridgeYgdkTermSummary 的 termCount/termTarget/weekCount/weekTarget 直接展示；未知本周数量不显示，未知目标不构造分母。历史直接使用现有记录查询与分页，映射 recordId/itemId/state/startTime/endTime/place/imageCount/isOpen/createdAt。原通用详情搜索仍覆盖卡片隐藏字段，项目 typed actions 与写流程不改变。协议、认证、路由、Cookie、请求参数/编码、解析和 Core 规则均无修改；无需迁移上游旧版合同或原生通知/相机功能。

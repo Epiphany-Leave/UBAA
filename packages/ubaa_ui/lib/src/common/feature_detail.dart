@@ -4,8 +4,9 @@ class _FeatureDetailView extends StatelessWidget {
   const _FeatureDetailView({
     required this.feature,
     required this.snapshot,
+    required this.subpage,
+    required this.onSubpageChanged,
     this.query,
-    required this.onBack,
     required this.onRetry,
     this.onBykcWrite,
     this.onBykcSignWrite,
@@ -22,8 +23,9 @@ class _FeatureDetailView extends StatelessWidget {
 
   final FeatureId feature;
   final FeatureSnapshot snapshot;
+  final _FeatureSubpage? subpage;
+  final ValueChanged<_FeatureSubpage?> onSubpageChanged;
   final FeatureQuery? query;
-  final VoidCallback onBack;
   final Future<void> Function() onRetry;
   final Future<void> Function(WriteOperation operation, int courseId)?
   onBykcWrite;
@@ -40,50 +42,97 @@ class _FeatureDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = switch (snapshot.status) {
-      FeatureLoadStatus.loading => const Center(
-        child: CircularProgressIndicator(),
-      ),
-      FeatureLoadStatus.failure => _error(context),
-      FeatureLoadStatus.stale => _stale(context),
-      FeatureLoadStatus.empty => _empty(context),
-      FeatureLoadStatus.idle => _empty(context),
-      FeatureLoadStatus.success => _details(context),
-    };
-    return Column(
-      children: <Widget>[
-        if (onQuery != null && _supportsQuery)
-          _FeatureQueryControls(
-            feature: feature,
-            details: snapshot.details,
-            onApply: onQuery!,
+    if (feature == FeatureId.schedule && onQuery != null) {
+      return TimetableView(snapshot: snapshot, onQuery: onQuery!);
+    }
+    if (feature == FeatureId.classroom && onQuery != null) {
+      return _ClassroomView(
+        snapshot: snapshot,
+        initialQuery: query,
+        onQuery: onQuery!,
+      );
+    }
+    if (feature == FeatureId.libbook && onQuery != null) {
+      return _LibbookView(
+        snapshot: snapshot,
+        initialQuery: query,
+        page: subpage,
+        onPageChanged: onSubpageChanged,
+        onQuery: onQuery!,
+        onReserve: onLibbookReserveWrite,
+        onCancel: onLibbookCancelWrite,
+      );
+    }
+    if (feature == FeatureId.bykc && onQuery != null) {
+      return _BykcView(
+        snapshot: snapshot,
+        initialQuery: query,
+        page: subpage,
+        onPageChanged: onSubpageChanged,
+        onQuery: onQuery!,
+        onWrite: onBykcWrite,
+        onSignWrite: onBykcSignWrite,
+      );
+    }
+    if (feature == FeatureId.cgyy && onQuery != null) {
+      return _CgyyView(
+        snapshot: snapshot,
+        initialQuery: query,
+        page: subpage,
+        onPageChanged: onSubpageChanged,
+        onQuery: onQuery!,
+        onReserve: onCgyySubmitWrite,
+        onCancel: onCgyyCancelWrite,
+      );
+    }
+    Widget page(List<FeatureDetail> details) {
+      final content = switch (snapshot.status) {
+        FeatureLoadStatus.loading => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        FeatureLoadStatus.failure => _error(context),
+        FeatureLoadStatus.stale => _stale(context, details),
+        FeatureLoadStatus.empty => _empty(context),
+        FeatureLoadStatus.idle => _empty(context),
+        FeatureLoadStatus.success => _details(context, details),
+      };
+      return Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: feature == FeatureId.ygdk && onQuery != null
+                ? Column(
+                    children: [
+                      _YgdkHeader(snapshot: snapshot, onQuery: onQuery!),
+                      Expanded(child: content),
+                    ],
+                  )
+                : content,
           ),
-        if (snapshot.resolvedRoute case final route?)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Chip(
-                avatar: const Icon(Icons.route, size: 18),
-                label: Text('实际路线：${route.label}'),
+          if (onQuery != null && _supportsQuery)
+            Positioned.fill(
+              child: _FeatureQueryControls(
+                feature: feature,
+                details: snapshot.details,
+                scheduleNavigation: snapshot.scheduleNavigation,
+                onApply: onQuery!,
               ),
             ),
-          ),
-        Expanded(child: content),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('返回功能列表'),
-            ),
-          ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
+
+    return _alwaysShowsSearch
+        ? _SearchableAcademicList(details: snapshot.details, builder: page)
+        : page(snapshot.details);
   }
+
+  bool get _alwaysShowsSearch => switch (feature) {
+    FeatureId.exam ||
+    FeatureId.grades ||
+    FeatureId.spoc ||
+    FeatureId.judge => true,
+    _ => false,
+  };
 
   bool get _supportsQuery => switch (feature) {
     FeatureId.schedule ||
@@ -100,11 +149,22 @@ class _FeatureDetailView extends StatelessWidget {
     FeatureId.evaluation => true,
   };
 
-  Widget _details(BuildContext context) {
-    if (snapshot.details.isEmpty) return _empty(context);
+  Widget _details(BuildContext context, List<FeatureDetail> details) {
+    if (details.isEmpty) return _empty(context);
+    return _detailsList(details);
+  }
+
+  Widget _detailsList(List<FeatureDetail> details) {
+    if (feature == FeatureId.exam) {
+      return _ExamList(details: details);
+    }
+    if (feature == FeatureId.grades) {
+      return _GradesList(details: details);
+    }
     return _FeatureDetailList(
       feature: feature,
-      details: snapshot.details,
+      details: details,
+      showSearchButton: !_alwaysShowsSearch,
       pagination: snapshot.pagination,
       query: query,
       onQuery: onQuery,
@@ -121,7 +181,7 @@ class _FeatureDetailView extends StatelessWidget {
     );
   }
 
-  Widget _stale(BuildContext context) {
+  Widget _stale(BuildContext context, List<FeatureDetail> details) {
     return Column(
       children: <Widget>[
         MaterialBanner(
@@ -132,25 +192,7 @@ class _FeatureDetailView extends StatelessWidget {
           ],
         ),
         Expanded(
-          child: snapshot.details.isEmpty
-              ? _empty(context)
-              : _FeatureDetailList(
-                  feature: feature,
-                  details: snapshot.details,
-                  pagination: snapshot.pagination,
-                  query: query,
-                  onQuery: onQuery,
-                  onBykcWrite: onBykcWrite,
-                  onBykcSignWrite: onBykcSignWrite,
-                  onSigninWrite: onSigninWrite,
-                  onCgyyCancelWrite: onCgyyCancelWrite,
-                  onLibbookReserveWrite: onLibbookReserveWrite,
-                  onLibbookCancelWrite: onLibbookCancelWrite,
-                  onCgyySubmitWrite: onCgyySubmitWrite,
-                  onEvaluationWrite: onEvaluationWrite,
-                  onYgdkSubmitWrite: onYgdkSubmitWrite,
-                  onPickYgdkPhoto: onPickYgdkPhoto,
-                ),
+          child: details.isEmpty ? _empty(context) : _detailsList(details),
         ),
       ],
     );

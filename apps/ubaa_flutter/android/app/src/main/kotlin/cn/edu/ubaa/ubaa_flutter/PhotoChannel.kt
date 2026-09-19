@@ -11,6 +11,7 @@ import java.io.File
 
 /** System camera/gallery only. No account, network, or school protocol access. */
 class PhotoChannel(private val activity: Activity, messenger: BinaryMessenger) {
+    private val credentials = SecureCredentialStore(activity)
     private val channel = MethodChannel(messenger, "cn.edu.buaa.ubaa/platform")
     private var pending: MethodChannel.Result? = null
     private var capture: File? = null
@@ -36,7 +37,7 @@ class PhotoChannel(private val activity: Activity, messenger: BinaryMessenger) {
                             .show()
                     }
                 }
-                else -> result.notImplemented()
+                else -> credentials.handle(call, result)
             }
         }
     }

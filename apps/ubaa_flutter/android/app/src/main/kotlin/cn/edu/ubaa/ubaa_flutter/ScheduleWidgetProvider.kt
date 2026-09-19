@@ -179,7 +179,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
             views.setBoolean(R.id.widget_next, "setEnabled", false)
             views.setTextViewText(
                 R.id.widget_message,
-                if (missingSnapshot) "请先打开 UBAA，登录并更新课表" else "暂无已安排课表，请打开应用更新课表",
+                if (missingSnapshot) "请先打开 UBAA，登录并本地化课表" else "暂无已安排课表，请打开应用本地化课表",
             )
         }
 

@@ -1,5 +1,9 @@
 # 协议来源对照矩阵
 
+## 2026-09-19 Android 安全凭据存储与名称调整
+
+接通既有 credentials.capability/read/write/clear 通道合同，Android 用 Keystore AES-256-GCM 密钥封装登录凭据，AtomicFile 写入 noBackupFilesDir；读写校验固定命名空间、字段和大小，失败不返回原始异常、不降级明文。能力探测执行原生加解密回环检查。仅处理用户主动保存的账号密码和自动登录偏好，学校认证、Cookie/Session 和身份分流仍由 Core 执行。UI 按用户确认只把“更新课表”改为“本地化课表”及解释文字，保留首次自动导入。研讨室入口采用 UBAA-PR AdvancedFeaturesScreen.kt 中 Icons.Default.DateRange 对应的 Flutter Icons.date_range。两冻结来源学校协议及字段均未修改。
+
 ## 2026-09-17 教务身份严格隔离
 
 用户要求本科与研究生接口不得互相干扰。对外 facade 已有身份验证，本轮删除内部历史“未知身份尝试本科/GSMIS”的回退及根据学期格式推断身份的路径，删除空本科校历转研究生的导入逻辑。Core 中按已确认学号选择唯一教务系统；不明确身份直接 InvalidInput。学期参数不能改变系统。GSMIS 和本科各自 URL、CAS 激活、解析、统计规则保持不变，公共认证与按域 Cookie 存储仍复用底层基础设施。与早期 UBAA-PR 的试探性回退不同，这是用户明确指定的收紧；两冻结来源的接口字段不变。新增直连/WebVPN 未知身份零网络请求测试，既有错误场景覆盖大写、小写、混合字母研究生学号；旧回退测试改为明确指定身份。

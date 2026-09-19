@@ -224,10 +224,10 @@ void main() {
       await tester.drag(pager, const Offset(0, -1000));
       await tester.pumpAndSettle();
       expect(find.text('13\n08:00\n08:45').hitTestable(), findsOneWidget);
-      expect(find.text('更新课表'), findsNothing);
+      expect(find.text('本地化课表'), findsNothing);
       await tester.tap(find.byTooltip('课表选项'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('更新课表'));
+      await tester.tap(find.text('本地化课表'));
       await tester.pumpAndSettle();
       expect(queries.single.updateSchedule, isTrue);
       await tester.pumpWidget(
@@ -246,7 +246,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('暂无已保存课表，请点击更新课表'), findsOneWidget);
+      expect(find.text('暂无已保存课表，请点击本地化课表'), findsOneWidget);
     },
   );
 }

@@ -192,7 +192,7 @@ class _TimetableViewState extends State<TimetableView> {
                     PopupMenuItem(
                       value: 'update',
                       enabled: !loading,
-                      child: const Text('更新课表'),
+                      child: const Text('本地化课表'),
                     ),
                   const PopupMenuItem(value: 'info', child: Text('课表信息')),
                 ],
@@ -238,7 +238,7 @@ class _TimetableViewState extends State<TimetableView> {
                       builder: (context) => AlertDialog(
                         title: const Text('课表信息'),
                         content: Text(
-                          '${data?.terms[_term] ?? '尚未选择学期'}\n本地课表 · 更新于 ${_semester?.updatedAt ?? '尚未导入'}\n左右滑动切换周次，更新课表时才联网查询。',
+                          '${data?.terms[_term] ?? '尚未选择学期'}\n本地课表 · 更新于 ${_semester?.updatedAt ?? '尚未导入'}\n首次自动导入后从本地读取。左右滑动切换周次；点击“本地化课表”可联网更新并保存整学期课表。',
                         ),
                         actions: [
                           TextButton(
@@ -266,7 +266,7 @@ class _TimetableViewState extends State<TimetableView> {
           child: weeks.isEmpty
               ? Center(
                   child: Text(
-                    widget.offline ? '暂无已保存课表，请登录后更新课表' : '暂无已保存课表，请点击更新课表',
+                    widget.offline ? '暂无已保存课表，请登录后本地化课表' : '暂无已保存课表，请点击本地化课表',
                   ),
                 )
               : PageView.builder(

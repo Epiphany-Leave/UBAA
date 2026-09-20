@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ubaa_domain/ubaa_domain.dart';
 import 'package:ubaa_ui/ubaa_ui.dart';
-import 'support/navigation.dart';
+import '../support/navigation.dart';
 
 void main() {
   testWidgets('研究生成绩显示 Core 统计且不启动本科跨学期统计', (tester) async {

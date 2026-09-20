@@ -202,9 +202,9 @@ mod tests {
             }],
             ..Default::default()
         };
-        assert!(validate(&[term.clone()], &semester).is_ok());
+        assert!(validate(std::slice::from_ref(&term), &semester).is_ok());
         semester.weeks[0].end_date = "2026-09-06".into();
-        assert!(validate(&[term.clone()], &semester).is_err());
+        assert!(validate(std::slice::from_ref(&term), &semester).is_err());
         semester.weeks[0].end_date = "2026-09-13garbage".into();
         assert!(validate(&[term], &semester).is_err());
     }

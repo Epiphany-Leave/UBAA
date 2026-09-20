@@ -18,6 +18,7 @@ part 'widgets/goldens.dart';
 part 'widgets/libbook_queries.dart';
 part 'widgets/libbook_writes.dart';
 part 'widgets/queries.dart';
+part 'widgets/assignment_queries.dart';
 part 'widgets/shell.dart';
 part 'widgets/signin_writes.dart';
 part 'widgets/states.dart';
@@ -44,6 +45,17 @@ void main() {
   _registerFeatureCollectionTests();
   _registerLibbookQueryTests();
   _registerQueryTests();
+  _registerAssignmentQueryTests();
   _registerSharedStateTests();
   _registerFeatureCardSemanticsTest();
+}
+
+Future<void> _chooseClassroomDate(WidgetTester tester, String date) async {
+  await tester.tap(find.byIcon(Icons.date_range));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byIcon(Icons.edit_outlined));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextFormField), date);
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
 }

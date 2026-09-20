@@ -697,7 +697,7 @@ void _registerSharedStateTests() {
       await tester.pump();
       await tester.tap(target);
       await tester.pump();
-      expect(find.text('返回功能列表'), findsOneWidget);
+      expect(find.byTooltip('返回'), findsOneWidget);
     }
 
     for (final status in statuses) {
@@ -760,7 +760,7 @@ void _registerSharedStateTests() {
           case FeatureLoadStatus.idle || FeatureLoadStatus.success:
             fail('状态矩阵不应包含 ${status.name}');
         }
-        await tester.tap(find.text('返回功能列表'));
+        await tester.tap(find.byTooltip('返回'));
         await tester.pump();
       }
     }

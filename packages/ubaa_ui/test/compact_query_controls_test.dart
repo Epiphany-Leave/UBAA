@@ -158,8 +158,8 @@ void main() {
           feature: feature,
           status: FeatureLoadStatus.empty,
         ),
-      FeatureId.bykc: const FeatureSnapshot(
-        feature: FeatureId.bykc,
+      FeatureId.spoc: const FeatureSnapshot(
+        feature: FeatureId.spoc,
         status: FeatureLoadStatus.success,
         details: [FeatureDetail(title: '编程课程')],
       ),
@@ -181,7 +181,14 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('博雅课程'));
+    await tester.tap(find.byIcon(Icons.apps_outlined));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('SPOC作业'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('SPOC作业'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('搜索当前结果'));
     await tester.pumpAndSettle();

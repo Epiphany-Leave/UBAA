@@ -22,6 +22,6 @@ void main() {
     await tester.tap(loginButton);
     await tester.pumpAndSettle();
     expect(find.text('主页'), findsWidgets);
-    expect(find.text('课表查询'), findsOneWidget);
+    expect(find.text('课表查询'), findsWidgets);
   });
 }

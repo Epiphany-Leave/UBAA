@@ -43,6 +43,19 @@ class _ProfileView extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 16),
+      if (AppearanceScope.of(context) != null) ...[
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('界面与课表设置'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(builder: (_) => const AppearanceSettingsPage()),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
       Card(
         child: Column(
           children: <Widget>[

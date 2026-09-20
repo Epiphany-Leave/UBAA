@@ -72,18 +72,9 @@ void main() {
                               FeatureField(label: '课程 ID', value: '42'),
                               FeatureField(label: '地点', value: '学院路主楼'),
                               FeatureField(label: '开课单位', value: '人文学院'),
-                              FeatureField(
-                                label: '课程分类',
-                                value: '博雅课程 / 美育',
-                              ),
-                              FeatureField(
-                                label: '适用人群',
-                                value: '研究生',
-                              ),
-                              FeatureField(
-                                label: '课程简介',
-                                value: '课程简介正文',
-                              ),
+                              FeatureField(label: '课程分类', value: '博雅课程 / 美育'),
+                              FeatureField(label: '适用人群', value: '研究生'),
+                              FeatureField(label: '课程简介', value: '课程简介正文'),
                               FeatureField(label: '状态', value: 'available'),
                               FeatureField(label: '选课开始', value: '2026-09-01'),
                               FeatureField(label: '选课截止', value: '2026-09-30'),

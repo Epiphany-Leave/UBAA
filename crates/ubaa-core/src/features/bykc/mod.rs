@@ -5,6 +5,7 @@ mod crypto;
 mod parser;
 mod read;
 mod write;
+pub(crate) use parser::parse_datetime;
 
 pub(crate) use crate::internal::route_state::BykcCredential;
 #[allow(unused_imports)]

@@ -9,7 +9,16 @@ void _registerLibbookQueryTests() {
           status: FeatureLoadStatus.success,
           summary: '已加载',
           details: feature == FeatureId.libbook
-              ? const <FeatureDetail>[FeatureDetail(title: '图书馆')]
+              ? const <FeatureDetail>[
+                  FeatureDetail(
+                    title: '图书馆',
+                    fields: [
+                      FeatureField(label: '馆 ID', value: 'main-library'),
+                      FeatureField(label: '楼层 1', value: '一层'),
+                      FeatureField(label: '楼层 1 ID', value: 'floor-1'),
+                    ],
+                  ),
+                ]
               : const <FeatureDetail>[],
         ),
     };
@@ -42,14 +51,7 @@ void _registerLibbookQueryTests() {
     );
     await tester.tap(find.text('图书馆座位'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('馆列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('馆区列表'));
-    await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.first, 'main-library');
-    await tester.enterText(fields.at(1), 'floor-1');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('预约座位'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.libbookAreas);
     expect(received?.premisesId, 'main-library');
@@ -95,17 +97,19 @@ void _registerLibbookQueryTests() {
     );
     await tester.tap(find.text('图书馆座位'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('馆列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('座位查询'));
-    await tester.pumpAndSettle();
-
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.first, 'area-1');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('预约座位'));
     await tester.pumpAndSettle();
 
     expect(queryCalls, 0);
-    expect(find.text('时段编号不能为空。'), findsOneWidget);
+    expect(find.text('座位'), findsWidgets);
+    expect(
+      find
+          .byType(FilledButton)
+          .evaluate()
+          .every(
+            (element) => (element.widget as FilledButton).onPressed == null,
+          ),
+      isTrue,
+    );
   });
 }

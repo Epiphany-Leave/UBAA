@@ -24,6 +24,23 @@ class _TimetableViewState extends State<TimetableView> {
   String? _term;
   int _index = 0;
   bool _initialTargetPending = true;
+  bool _restoredAppearance = false;
+  String? _preferredTerm;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final preferred = AppearanceScope.of(context)?.term;
+    if (!_restoredAppearance || preferred != _preferredTerm) {
+      _restoredAppearance = true;
+      _preferredTerm = preferred;
+      if (widget.initialTerm == null &&
+          _semesters.any((s) => s.term == preferred)) {
+        _term = preferred;
+        _reset();
+      }
+    }
+  }
+
   List<TimetableSemester> get _semesters =>
       widget.snapshot.timetable?.semesters ?? [];
   TimetableSemester? get _semester =>
@@ -63,6 +80,7 @@ class _TimetableViewState extends State<TimetableView> {
         : _semester?.weeks.elementAtOrNull(_index)?.number;
     final fallbackTerm =
         _semester?.term ??
+        _semesters.where((s) => s.term == _preferredTerm).firstOrNull?.term ??
         _semesters
             .where((s) => s.weeks.any((w) => w.contains(DateTime.now())))
             .firstOrNull
@@ -104,6 +122,21 @@ class _TimetableViewState extends State<TimetableView> {
     _revealWeek(index);
   }
 
+  void _saveTerm(String term) {
+    final settings = AppearanceScope.of(context);
+    if (settings == null) return;
+    _preferredTerm = term;
+    settings.term = term;
+    unawaited(
+      settings.save().catchError((Object _) {
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('学期选择保存失败，请重试')));
+      }),
+    );
+  }
+
   void _revealWeek(int index) {
     if (!_weekStrip.hasClients) return;
     _weekStrip.animateTo(
@@ -124,6 +157,7 @@ class _TimetableViewState extends State<TimetableView> {
       return;
     }
     if (_term != semester.term) {
+      _saveTerm(semester.term);
       setState(() {
         _term = semester.term;
         _index = -1;
@@ -195,9 +229,20 @@ class _TimetableViewState extends State<TimetableView> {
                       child: const Text('本地化课表'),
                     ),
                   const PopupMenuItem(value: 'info', child: Text('课表信息')),
+                  if (AppearanceScope.of(context) != null)
+                    const PopupMenuItem(
+                      value: 'settings',
+                      child: Text('课表显示设置'),
+                    ),
                 ],
                 onSelected: (action) async {
-                  if (action == 'update') {
+                  if (action == 'settings') {
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => const AppearanceSettingsPage(),
+                      ),
+                    );
+                  } else if (action == 'update') {
                     await widget.onQuery(
                       FeatureQuery(
                         view: FeatureQueryView.scheduleWeek,
@@ -223,6 +268,7 @@ class _TimetableViewState extends State<TimetableView> {
                       ),
                     );
                     if (!mounted || term == null) return;
+                    _saveTerm(term);
                     setState(() {
                       _term = term;
                       _index = 0;
@@ -255,7 +301,8 @@ class _TimetableViewState extends State<TimetableView> {
           ),
         ),
         if (loading) const LinearProgressIndicator(),
-        if (weeks.isNotEmpty)
+        if (weeks.isNotEmpty &&
+            (AppearanceScope.of(context)?.weekStrip ?? true))
           _WeekStrip(
             controller: _weekStrip,
             weeks: weeks,
@@ -417,14 +464,16 @@ class _TimetableGrid extends StatelessWidget {
         sections.any((s) => s.number == (course.end ?? course.begin)) &&
         (course.end ?? course.begin!) >= course.begin!;
     final unknown = week.courses.where((course) => !placed(course));
-    const rowHeight = 76.0;
+    final appearance = AppearanceScope.of(context);
+    final rowHeight = appearance?.rowHeight ?? 76.0;
+    final days = (appearance?.weekends ?? true) ? 7 : 5;
     return SingleChildScrollView(
       child: Column(
         children: [
           Row(
             children: [
               const SizedBox(width: 42),
-              for (var day = 1; day <= 7; day++)
+              for (var day = 1; day <= days; day++)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -451,7 +500,9 @@ class _TimetableGrid extends StatelessWidget {
                           height: rowHeight,
                           child: Center(
                             child: Text(
-                              '${section.number}\n${section.start}\n${section.end}',
+                              (appearance?.timeline ?? true)
+                                  ? '${section.number}\n${section.start}\n${section.end}'
+                                  : '${section.number}',
                               textAlign: TextAlign.center,
                               style: const TextStyle(fontSize: 10),
                             ),
@@ -460,7 +511,7 @@ class _TimetableGrid extends StatelessWidget {
                     ],
                   ),
                 ),
-                for (var day = 1; day <= 7; day++)
+                for (var day = 1; day <= days; day++)
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {

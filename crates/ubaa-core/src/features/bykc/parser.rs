@@ -146,7 +146,7 @@ fn course(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
     })
 }
 
-fn parse_datetime(value: Option<&str>) -> Option<NaiveDateTime> {
+pub(crate) fn parse_datetime(value: Option<&str>) -> Option<NaiveDateTime> {
     let value = value?.trim();
     [
         "%Y-%m-%d %H:%M:%S",
@@ -318,7 +318,8 @@ pub(super) fn parse_course_detail_for_write(body: &str) -> Result<BykcCourse> {
         .ok_or_else(|| error("博雅课程详情结构无效"))?;
     ensure_optional_i32(map, "courseCurrentCount")?;
     ensure_optional_i32(map, "courseMaxCount")?;
-    course_detail(&value, Local::now().naive_local())
+    // 写入资格不能沿用展示页“缺少 selected 视为未选”的兼容默认值。
+    course(&value, Local::now().naive_local())
 }
 
 fn course_detail(value: &Value, now: NaiveDateTime) -> Result<BykcCourse> {
@@ -643,28 +644,28 @@ pub(crate) fn parse_statistics(body: &str) -> Result<BykcStatistics> {
             qualified: v.get("isQualified").and_then(Value::as_bool),
         })
         .collect();
-    if categories.is_empty() {
-        if let Some(statistical) = m.get("statistical").and_then(Value::as_object) {
-            for (category_key, sub_categories) in statistical {
-                let Some(sub_categories) = sub_categories.as_object() else {
+    if categories.is_empty()
+        && let Some(statistical) = m.get("statistical").and_then(Value::as_object)
+    {
+        for (category_key, sub_categories) in statistical {
+            let Some(sub_categories) = sub_categories.as_object() else {
+                continue;
+            };
+            for (sub_category_key, entry) in sub_categories {
+                let Some(entry) = entry.as_object() else {
                     continue;
                 };
-                for (sub_category_key, entry) in sub_categories {
-                    let Some(entry) = entry.as_object() else {
-                        continue;
-                    };
-                    let required_count = int(entry, "assessmentCount");
-                    let passed_count = int(entry, "completeAssessmentCount");
-                    categories.push(BykcStatistic {
-                        category_name: Some(statistic_name(category_key)),
-                        sub_category_name: Some(statistic_name(sub_category_key)),
-                        required_count,
-                        passed_count,
-                        qualified: required_count
-                            .zip(passed_count)
-                            .map(|(required, passed)| passed >= required),
-                    });
-                }
+                let required_count = int(entry, "assessmentCount");
+                let passed_count = int(entry, "completeAssessmentCount");
+                categories.push(BykcStatistic {
+                    category_name: Some(statistic_name(category_key)),
+                    sub_category_name: Some(statistic_name(sub_category_key)),
+                    required_count,
+                    passed_count,
+                    qualified: required_count
+                        .zip(passed_count)
+                        .map(|(required, passed)| passed >= required),
+                });
             }
         }
     }

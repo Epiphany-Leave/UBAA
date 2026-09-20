@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/calendar.dart';
 import 'api/client.dart';
 import 'api/read.dart';
 import 'api/simple.dart';
@@ -69,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 922899111;
+  int get rustContentHash => 818417641;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -400,6 +401,22 @@ abstract class RustLibApi extends BaseApi {
   });
 
   String crateApiSimpleBridgeHello();
+
+  BridgeCalendarDraft? crateApiCalendarBykcCalendarDraft({
+    required String title,
+    String? location,
+    String? start,
+    String? end,
+    String? selectStart,
+    required bool reminder,
+  });
+
+  bool crateApiCalendarCalendarOverlaps({
+    required PlatformInt64 start,
+    required PlatformInt64 end,
+    required PlatformInt64 otherStart,
+    required PlatformInt64 otherEnd,
+  });
 
   Future<void> crateApiSimpleInitApp();
 
@@ -2864,6 +2881,85 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "bridge_hello", argNames: []);
 
   @override
+  BridgeCalendarDraft? crateApiCalendarBykcCalendarDraft({
+    required String title,
+    String? location,
+    String? start,
+    String? end,
+    String? selectStart,
+    required bool reminder,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(title, serializer);
+          sse_encode_opt_String(location, serializer);
+          sse_encode_opt_String(start, serializer);
+          sse_encode_opt_String(end, serializer);
+          sse_encode_opt_String(selectStart, serializer);
+          sse_encode_bool(reminder, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_bridge_calendar_draft,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCalendarBykcCalendarDraftConstMeta,
+        argValues: [title, location, start, end, selectStart, reminder],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCalendarBykcCalendarDraftConstMeta =>
+      const TaskConstMeta(
+        debugName: "bykc_calendar_draft",
+        argNames: [
+          "title",
+          "location",
+          "start",
+          "end",
+          "selectStart",
+          "reminder",
+        ],
+      );
+
+  @override
+  bool crateApiCalendarCalendarOverlaps({
+    required PlatformInt64 start,
+    required PlatformInt64 end,
+    required PlatformInt64 otherStart,
+    required PlatformInt64 otherEnd,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(start, serializer);
+          sse_encode_i_64(end, serializer);
+          sse_encode_i_64(otherStart, serializer);
+          sse_encode_i_64(otherEnd, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 66)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCalendarCalendarOverlapsConstMeta,
+        argValues: [start, end, otherStart, otherEnd],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCalendarCalendarOverlapsConstMeta =>
+      const TaskConstMeta(
+        debugName: "calendar_overlaps",
+        argNames: ["start", "end", "otherStart", "otherEnd"],
+      );
+
+  @override
   Future<void> crateApiSimpleInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -2872,7 +2968,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 65,
+            funcId: 67,
             port: port_,
           );
         },
@@ -2979,6 +3075,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   dco_decode_box_autoadd_bridge_bykc_sign_course_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_bridge_bykc_sign_course_request(raw);
+  }
+
+  @protected
+  BridgeCalendarDraft dco_decode_box_autoadd_bridge_calendar_draft(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_bridge_calendar_draft(raw);
   }
 
   @protected
@@ -3322,6 +3426,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       realName: dco_decode_opt_String(arr[2]),
       studentNo: dco_decode_opt_String(arr[3]),
       collegeName: dco_decode_opt_String(arr[4]),
+    );
+  }
+
+  @protected
+  BridgeCalendarDraft dco_decode_bridge_calendar_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return BridgeCalendarDraft(
+      title: dco_decode_String(arr[0]),
+      location: dco_decode_String(arr[1]),
+      description: dco_decode_String(arr[2]),
+      startMs: dco_decode_i_64(arr[3]),
+      endMs: dco_decode_i_64(arr[4]),
+      reminderMinutes: dco_decode_opt_box_autoadd_i_32(arr[5]),
     );
   }
 
@@ -5579,6 +5699,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BridgeCalendarDraft? dco_decode_opt_box_autoadd_bridge_calendar_draft(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_bridge_calendar_draft(raw);
+  }
+
+  @protected
   BridgeCgyyCancelOrderTarget?
   dco_decode_opt_box_autoadd_bridge_cgyy_cancel_order_target(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -5807,6 +5937,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_bridge_bykc_sign_course_request(deserializer));
+  }
+
+  @protected
+  BridgeCalendarDraft sse_decode_box_autoadd_bridge_calendar_draft(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bridge_calendar_draft(deserializer));
   }
 
   @protected
@@ -6258,6 +6396,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       realName: var_realName,
       studentNo: var_studentNo,
       collegeName: var_collegeName,
+    );
+  }
+
+  @protected
+  BridgeCalendarDraft sse_decode_bridge_calendar_draft(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_title = sse_decode_String(deserializer);
+    var var_location = sse_decode_String(deserializer);
+    var var_description = sse_decode_String(deserializer);
+    var var_startMs = sse_decode_i_64(deserializer);
+    var var_endMs = sse_decode_i_64(deserializer);
+    var var_reminderMinutes = sse_decode_opt_box_autoadd_i_32(deserializer);
+    return BridgeCalendarDraft(
+      title: var_title,
+      location: var_location,
+      description: var_description,
+      startMs: var_startMs,
+      endMs: var_endMs,
+      reminderMinutes: var_reminderMinutes,
     );
   }
 
@@ -9010,6 +9169,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BridgeCalendarDraft? sse_decode_opt_box_autoadd_bridge_calendar_draft(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_bridge_calendar_draft(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   BridgeCgyyCancelOrderTarget?
   sse_decode_opt_box_autoadd_bridge_cgyy_cancel_order_target(
     SseDeserializer deserializer,
@@ -9313,6 +9485,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bridge_bykc_sign_course_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_bridge_calendar_draft(
+    BridgeCalendarDraft self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bridge_calendar_draft(self, serializer);
   }
 
   @protected
@@ -9687,6 +9868,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.realName, serializer);
     sse_encode_opt_String(self.studentNo, serializer);
     sse_encode_opt_String(self.collegeName, serializer);
+  }
+
+  @protected
+  void sse_encode_bridge_calendar_draft(
+    BridgeCalendarDraft self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.location, serializer);
+    sse_encode_String(self.description, serializer);
+    sse_encode_i_64(self.startMs, serializer);
+    sse_encode_i_64(self.endMs, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.reminderMinutes, serializer);
   }
 
   @protected
@@ -11862,6 +12057,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_bridge_bykc_sign_config(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_bridge_calendar_draft(
+    BridgeCalendarDraft? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_bridge_calendar_draft(self, serializer);
     }
   }
 

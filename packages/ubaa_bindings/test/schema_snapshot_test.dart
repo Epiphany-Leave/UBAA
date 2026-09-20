@@ -12,7 +12,9 @@ void main() {
   final write = File('lib/src/rust/api/write.dart').readAsStringSync();
 
   test('生成的库名必须与 Rust crate 一致，不能静默使用 UNKNOWN', () {
-    final generated = File('lib/src/rust/frb_generated.dart').readAsStringSync();
+    final generated = File(
+      'lib/src/rust/frb_generated.dart',
+    ).readAsStringSync();
     expect(generated.contains("stem: 'ubaa_flutter_bridge'"), isTrue);
     expect(generated.contains("'UNKNOWN'"), isFalse);
   });

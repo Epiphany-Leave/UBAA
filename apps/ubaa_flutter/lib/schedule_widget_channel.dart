@@ -76,6 +76,7 @@ Map<String, Object?>? encodeScheduleWidgetSnapshot(Timetable? timetable) {
       for (final semester in timetable.semesters)
         <String, Object?>{
           'term': semester.term,
+          'name': timetable.terms[semester.term] ?? semester.term,
           'updatedAt': semester.updatedAt,
           'weeks': <Map<String, Object?>>[
             for (final week in semester.weeks)

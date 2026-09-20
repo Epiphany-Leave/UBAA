@@ -9,6 +9,7 @@ class _FeatureDetailView extends StatelessWidget {
     this.query,
     required this.onRetry,
     this.onBykcWrite,
+    this.boyaCalendar,
     this.onBykcSignWrite,
     this.onSigninWrite,
     this.onCgyyCancelWrite,
@@ -30,6 +31,7 @@ class _FeatureDetailView extends StatelessWidget {
   final Future<void> Function(WriteOperation operation, int courseId)?
   onBykcWrite;
   final BykcSignStarter? onBykcSignWrite;
+  final BoyaCalendarActions? boyaCalendar;
   final SigninStarter? onSigninWrite;
   final CgyyCancelStarter? onCgyyCancelWrite;
   final LibbookReserveStarter? onLibbookReserveWrite;
@@ -65,6 +67,7 @@ class _FeatureDetailView extends StatelessWidget {
     }
     if (feature == FeatureId.bykc && onQuery != null) {
       return _BykcView(
+        calendar: boyaCalendar,
         snapshot: snapshot,
         initialQuery: query,
         page: subpage,

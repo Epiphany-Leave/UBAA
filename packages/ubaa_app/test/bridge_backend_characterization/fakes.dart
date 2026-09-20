@@ -55,6 +55,14 @@ class _CharacterizationBridgeClient implements BridgeClient {
   }
 
   @override
+  Future<BridgeSavedSchedule> updateSavedSchedule({String? term}) async {
+    calls.add('updateSavedSchedule');
+    return emptyReads
+        ? const BridgeSavedSchedule(terms: [], semesters: [])
+        : _savedScheduleFixture();
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     final member = invocation.memberName;
     if (_readMembers.contains(member)) {

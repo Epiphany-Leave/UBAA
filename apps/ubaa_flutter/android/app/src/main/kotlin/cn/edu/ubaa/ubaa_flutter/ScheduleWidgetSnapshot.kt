@@ -13,6 +13,7 @@ internal data class WidgetSchedule(val semesters: List<WidgetSemester>)
 
 internal data class WidgetSemester(
     val term: String,
+    val name: String,
     val updatedAt: String,
     val weeks: List<WidgetWeek>,
 )
@@ -77,6 +78,7 @@ internal object ScheduleWidgetSnapshot {
         if (weeks.length() > 128) return null
         return WidgetSemester(
             term = term,
+            name = value.optionalString("name") ?: term,
             updatedAt = value.optionalString("updatedAt").orEmpty(),
             weeks = List(weeks.length()) { index -> parseWeek(weeks.optJSONObject(index)) }
                 .filterNotNull()

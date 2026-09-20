@@ -160,6 +160,36 @@ void main() {
       ),
     ],
   );
+  testWidgets('课表设置切换周末和时间轴立即生效', (tester) async {
+    final settings = AppearanceSettings();
+    await tester.pumpWidget(
+      AppearanceScope(
+        settings: settings,
+        child: MaterialApp(
+          home: Scaffold(
+            body: TimetableView(
+              snapshot: FeatureSnapshot(
+                feature: FeatureId.schedule,
+                timetable: timetable,
+              ),
+              onQuery: (_) async {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('周六'), findsOneWidget);
+    expect(find.text('1\n08:00\n08:45'), findsOneWidget);
+    settings.weekends = false;
+    settings.timeline = false;
+    await settings.save();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('周六'), findsNothing);
+    expect(find.text('1\n08:00\n08:45'), findsNothing);
+    expect(find.text('1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'weekly pages drag locally, courses open details, update is explicit',
     (tester) async {

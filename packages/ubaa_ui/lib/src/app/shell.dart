@@ -30,6 +30,7 @@ class UbaaMainShell extends StatefulWidget {
     required this.onRoutePolicyChanged,
     required this.onTelemetryChanged,
     this.initialTab = 0,
+    this.currentTime,
     this.activeRoutes = const <ConnectionMode>[],
     this.onReadDiagnostics,
     this.onLoadAppVersion,
@@ -44,6 +45,7 @@ class UbaaMainShell extends StatefulWidget {
     this.onConfirmWrite,
     this.onFeatureQuery,
     this.onPrepareBykcWrite,
+    this.boyaCalendar,
     this.onPrepareBykcSignWrite,
     this.onPrepareSigninWrite,
     this.onPrepareCgyyCancelWrite,
@@ -76,6 +78,9 @@ class UbaaMainShell extends StatefulWidget {
 
   /// 供宿主恢复上次导航位置或集成测试从指定功能分组启动。
   final int initialTab;
+
+  /// 固定预览与截图测试的日期；宿主省略时使用设备时间。
+  final DateTime? currentTime;
   final List<ConnectionMode> activeRoutes;
 
   /// 宿主提供本轮允许字段的脱敏报告，不读取账号或业务数据。
@@ -95,6 +100,7 @@ class UbaaMainShell extends StatefulWidget {
   final Future<WriteIntent> Function(WriteOperation operation, int courseId)?
   onPrepareBykcWrite;
   final BykcSignPreparer? onPrepareBykcSignWrite;
+  final BoyaCalendarActions? boyaCalendar;
   final SigninPreparer? onPrepareSigninWrite;
   final CgyyCancelPreparer? onPrepareCgyyCancelWrite;
   final LibbookReservePreparer? onPrepareLibbookReserveWrite;
@@ -171,9 +177,12 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
         : _openedFeature == null
         ? _buildTab(context)
         : _FeatureDetailView(
+            boyaCalendar: widget.boyaCalendar,
             feature: _openedFeature!,
             snapshot: widget.snapshots[_openedFeature!]!,
-            query: _featureQueries[_openedFeature!] ?? const FeatureQuery(),
+            query:
+                _featureQueries[_openedFeature!] ??
+                FeatureQuery(date: widget.currentTime),
             subpage: _openedSubpage,
             onSubpageChanged: (subpage) =>
                 setState(() => _openedSubpage = subpage),
@@ -288,6 +297,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
 
   Widget _buildTab(BuildContext context) => switch (_selectedIndex) {
     0 => _HomeView(
+      currentTime: widget.currentTime,
       user: widget.user,
       snapshots: widget.snapshots,
       onFeatureTap: _openFeature,
@@ -546,6 +556,18 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     if (confirm == null) return;
     final outcome = await confirm();
     if (!mounted || outcome == null) return;
+    if (intent.operation == WriteOperation.bykcSelectCourse &&
+        outcome.result?.success == true &&
+        outcome.result?.outcomeUnknown == false) {
+      const query = FeatureQuery(view: FeatureQueryView.bykcChosenCourses);
+      setState(() {
+        _openedFeature = FeatureId.bykc;
+        _openedSubpage = _FeatureSubpage.bykcChosen;
+        _featureQueries[FeatureId.bykc] = query;
+      });
+      await widget.onFeatureQuery?.call(FeatureId.bykc, query);
+      if (!mounted) return;
+    }
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(outcome.message)));

@@ -191,7 +191,7 @@ fn academic_queries_use_confirmed_identity() {
         assert_eq!(grades.statistics.is_some(), !undergraduate);
         if let Some(stats) = grades.statistics {
             assert!(stats.gpa.is_none());
-            assert_eq!(stats.gpa_credits, 0.0);
+            assert!(stats.gpa_credits.abs() < f64::EPSILON);
         }
         let _ = std::fs::remove_dir_all(path);
     }

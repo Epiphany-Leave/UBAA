@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import java.text.SimpleDateFormat
@@ -46,7 +47,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
     override fun onDeleted(context: Context, ids: IntArray) {
         val editor = context.getSharedPreferences(WIDGET_PREFERENCES, Context.MODE_PRIVATE).edit()
         ids.forEach { id ->
-            listOf("anchor", "term", "week").forEach { editor.remove("$id-$it") }
+            listOf("anchor", "term", "week", "fixedTerm", "background", "font", "timeline", "weekends", "offset").forEach { editor.remove("$id-$it") }
         }
         editor.apply()
     }
@@ -60,6 +61,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
             ScheduleWidgetProvider::class.java,
             TodayScheduleWidgetProvider::class.java,
             UpcomingScheduleWidgetProvider::class.java,
+            DayScheduleWidgetProvider::class.java,
         )
 
         fun requestRefresh(context: Context) {
@@ -87,17 +89,28 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
             val agendaDays = when (provider.className) {
                 TodayScheduleWidgetProvider::class.java.name -> 1
                 UpcomingScheduleWidgetProvider::class.java.name -> 3
+                DayScheduleWidgetProvider::class.java.name -> -1
                 else -> 0
             }
             val preferences = context.getSharedPreferences(WIDGET_PREFERENCES, Context.MODE_PRIVATE)
             val today = widgetToday()
             val anchor = widgetDate(today)
+            val dayView = agendaDays == -1
+            var offset = if (preferences.getString("$id-anchor", null) == anchor) preferences.getInt("$id-offset", 0) else 0
+            if (dayView && step != null) offset = if (step == 0) 0 else (offset + step).coerceIn(-366, 366)
+            val fixedTerm = if (agendaDays <= 0) preferences.getString("$id-fixedTerm", null)?.takeIf { it.isNotBlank() } else null
+            val activeTerm = fixedTerm ?: preferences.getString("activeTerm", null)
             val keepSelection = agendaDays == 0 &&
                 step != 0 &&
                 preferences.getString("$id-anchor", null) == anchor
-            val schedule = ScheduleWidgetSnapshot.read(context)
+            val snapshot = ScheduleWidgetSnapshot.read(context)
+            // A pinned term must never silently show another semester's classes.
+            val schedule = if (activeTerm.isNullOrBlank()) snapshot else snapshot?.copy(semesters = snapshot.semesters.filter { it.term == activeTerm })
+            val baseDate = if (dayView && fixedTerm != null && schedule?.weekAt(today) == null)
+                parseWidgetDate(schedule?.semesters?.firstOrNull()?.weeks?.firstOrNull()?.start) ?: today else today
+            val displayDate = (baseDate.clone() as Calendar).apply { if (dayView) add(Calendar.DAY_OF_MONTH, offset) }
             var selected = schedule?.selectWeek(
-                today,
+                displayDate,
                 if (keepSelection) preferences.getString("$id-term", null) else null,
                 if (keepSelection) preferences.getInt("$id-week", -1) else null,
             )
@@ -107,12 +120,22 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
                 val index = weeks.indexOfFirst { it.number == current.week.number }
                 selected = weeks.getOrNull(index + step)?.let { WidgetSelection(current.semester, it) } ?: current
             }
-            val layout = when (agendaDays) {
-                1 -> R.layout.schedule_today_widget
-                3 -> R.layout.schedule_upcoming_widget
-                else -> R.layout.schedule_widget
-            }
-            val views = RemoteViews(context.packageName, layout)
+            val views = RemoteViews(context.packageName, R.layout.schedule_widget)
+            val style = WidgetStyle(
+                font = preferences.getInt("$id-font", 1).coerceIn(0, 2),
+                timeline = preferences.getBoolean("$id-timeline", true),
+                weekends = preferences.getBoolean("$id-weekends", true),
+            )
+            views.setInt(R.id.widget_root, "setBackgroundResource", when (preferences.getInt("$id-background", 0)) {
+                1 -> R.drawable.schedule_widget_warm
+                2 -> android.R.color.transparent
+                else -> R.drawable.schedule_widget_background
+            })
+            views.setViewVisibility(R.id.widget_settings, if (agendaDays <= 0) View.VISIBLE else View.GONE)
+            views.setOnClickPendingIntent(R.id.widget_settings, PendingIntent.getActivity(context, id,
+                Intent(context, ScheduleWidgetSettingsActivity::class.java).setData(Uri.parse("ubaa-widget://settings/$id"))
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
             views.setOnClickPendingIntent(
                 R.id.widget_root,
                 PendingIntent.getActivity(
@@ -138,7 +161,13 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
                     ),
                 )
             }
-            val showNavigation = agendaDays == 0
+            val showNavigation = agendaDays <= 0
+            if (dayView) {
+                views.setContentDescription(R.id.widget_previous, "前一天")
+                views.setContentDescription(R.id.widget_next, "后一天")
+                views.setTextViewText(R.id.widget_current, "今天")
+                views.setContentDescription(R.id.widget_current, "回到今天")
+            }
             views.setViewVisibility(R.id.widget_previous, if (showNavigation) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.widget_next, if (showNavigation) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.widget_current, if (showNavigation) View.VISIBLE else View.GONE)
@@ -149,6 +178,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
                     .putString("$id-anchor", anchor)
                     .putString("$id-term", selected.semester.term)
                     .putInt("$id-week", selected.week.number)
+                    .putInt("$id-offset", offset)
                     .apply()
                 renderScheduleWidget(
                     context = context,
@@ -157,20 +187,25 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
                     views = views,
                     selected = selected,
                     schedule = schedule,
-                    today = today,
+                    today = displayDate,
                     agendaDays = agendaDays,
+                    style = style,
                 )
             }
             manager.updateAppWidget(id, views)
+            if (agendaDays == 0) manager.notifyAppWidgetViewDataChanged(id, R.id.widget_week_list)
         }
 
         private fun renderEmptyWidget(views: RemoteViews, missingSnapshot: Boolean, agendaDays: Int) {
             views.setViewVisibility(R.id.widget_grid, View.GONE)
+            views.setViewVisibility(R.id.widget_week_header, View.GONE)
+            views.setViewVisibility(R.id.widget_week_list, View.GONE)
             views.setImageViewBitmap(R.id.widget_grid, null)
             views.setViewVisibility(R.id.widget_message, View.VISIBLE)
             views.setTextViewText(R.id.widget_title, when (agendaDays) {
                 1 -> "UBAA 今日课程"
                 3 -> "UBAA 近日课程"
+                -1 -> "UBAA 日视图"
                 else -> "UBAA 周课表"
             })
             views.setTextViewText(R.id.widget_footer, "本地课表 · 点击打开应用")
@@ -192,32 +227,45 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
             schedule: WidgetSchedule?,
             today: Calendar,
             agendaDays: Int,
+            style: WidgetStyle,
         ) {
             val options = manager.getAppWidgetOptions(id)
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 320).coerceIn(110, 700) - 16
-            val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 400).coerceIn(100, 900) - 48
+            val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 400).coerceIn(100, 900) - 64
             if (agendaDays == 0 && width < 220) views.setViewVisibility(R.id.widget_current, View.GONE)
             val title = when (agendaDays) {
                 1 -> "今日课程 · ${widgetDate(today).takeLast(5)}"
                 3 -> "近日课程 · 今天起三天"
-                else -> "周课表 · ${selected.week.name}"
+                -1 -> "日视图 · ${widgetDate(today).takeLast(5)}"
+                else -> "一周课程 · ${selected.week.name}"
             }
             views.setTextViewText(R.id.widget_title, title)
-            views.setTextViewText(R.id.widget_footer, "本地课表 · 更新于 ${selected.semester.updatedAt}")
+            views.setTextViewText(R.id.widget_footer, selected.semester.name)
             views.setViewVisibility(R.id.widget_message, View.GONE)
-            views.setViewVisibility(R.id.widget_grid, View.VISIBLE)
-            val image = if (agendaDays == 0) {
-                cn.edu.ubaa.ubaa_flutter.renderScheduleWidget(selected, width, height)
+            views.setViewVisibility(R.id.widget_grid, if (agendaDays == 0) View.GONE else View.VISIBLE)
+            views.setViewVisibility(R.id.widget_week_header, if (agendaDays == 0) View.VISIBLE else View.GONE)
+            views.setViewVisibility(R.id.widget_week_list, if (agendaDays == 0) View.VISIBLE else View.GONE)
+            if (agendaDays == 0) {
+                views.setImageViewBitmap(R.id.widget_grid, null)
+                views.setImageViewBitmap(R.id.widget_week_header,
+                    cn.edu.ubaa.ubaa_flutter.renderScheduleWidget(selected, width, WEEK_HEADER_HEIGHT, style, headerOnly = true))
+                views.setRemoteAdapter(R.id.widget_week_list, Intent(context, ScheduleWeekService::class.java)
+                    .setData(Uri.parse("ubaa-widget://rows/$id"))
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                // A collection needs a mutable, explicitly targeted template for row fill-in extras.
+                views.setPendingIntentTemplate(R.id.widget_week_list, PendingIntent.getActivity(context, id,
+                    openIntent(context, selected).setData(Uri.parse("ubaa-widget://open/$id")),
+                    PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0))
             } else {
-                renderAgendaWidget(schedule?.agenda(today, agendaDays).orEmpty(), width, height)
+                views.setImageViewBitmap(R.id.widget_grid, renderAgendaWidget(schedule?.agenda(today, if (agendaDays == -1) 1 else agendaDays).orEmpty(), width, height,
+                    days = if (agendaDays == 3) 3 else 1, filled = agendaDays == -1, style = style, today = today))
             }
-            views.setImageViewBitmap(R.id.widget_grid, image)
             views.setContentDescription(
                 R.id.widget_grid,
                 buildString {
                     append("$title，点击打开周课表。")
-                    if (agendaDays > 0) {
-                        schedule?.agenda(today, agendaDays).orEmpty().forEach {
+                    if (agendaDays != 0) {
+                        schedule?.agenda(today, if (agendaDays == -1) 1 else agendaDays).orEmpty().forEach {
                             append("${it.date} ${it.start} ${it.course.title} ${it.course.place.orEmpty()}；")
                         }
                     } else selected.week.courses
@@ -227,8 +275,8 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
                 },
             )
             val weeks = selected.semester.weeks
-            views.setBoolean(R.id.widget_previous, "setEnabled", selected.week != weeks.firstOrNull())
-            views.setBoolean(R.id.widget_next, "setEnabled", selected.week != weeks.lastOrNull())
+            views.setBoolean(R.id.widget_previous, "setEnabled", agendaDays == -1 || selected.week != weeks.firstOrNull())
+            views.setBoolean(R.id.widget_next, "setEnabled", agendaDays == -1 || selected.week != weeks.lastOrNull())
         }
 
         private fun openIntent(context: Context, selected: WidgetSelection?): Intent = Intent(
@@ -247,6 +295,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
 class TodayScheduleWidgetProvider : ScheduleWidgetProvider()
 
 class UpcomingScheduleWidgetProvider : ScheduleWidgetProvider()
+class DayScheduleWidgetProvider : ScheduleWidgetProvider()
 
 private val chinaTimeZone: TimeZone = TimeZone.getTimeZone("Asia/Shanghai")
 
@@ -321,10 +370,10 @@ private fun WidgetSchedule.agenda(today: Calendar, days: Int): List<WidgetAgenda
             Calendar.SATURDAY -> 6
             else -> 7
         }
-        selected.week.courses.filter { it.day == weekday }.forEach { course ->
+        selected.week.courses.filter { it.day == weekday }.sortedBy { it.begin }.forEach { course ->
             val start = selected.week.sections.firstOrNull { it.number == course.begin }?.start.orEmpty()
             val end = selected.week.sections.firstOrNull { it.number == (course.end ?: course.begin) }?.end.orEmpty()
             add(WidgetAgendaItem(widgetDate(date).takeLast(5), start, end, course))
         }
     }
-}.sortedWith(compareBy({ it.date }, { it.start }, { it.course.title }))
+}

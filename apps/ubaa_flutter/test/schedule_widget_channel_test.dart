@@ -24,7 +24,11 @@ void main() {
           (call) => pending.future,
         );
 
-    await ScheduleWidgetChannel().initialize();
+    try {
+      await ScheduleWidgetChannel().initialize();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   test('widget snapshot only contains timetable display fields', () {
@@ -74,6 +78,7 @@ void main() {
     final course =
         (week['courses']! as List<Object?>).single as Map<String, Object?>;
     expect(week['start'], '2026-03-02');
+    expect(semester['name'], '2026 春');
     expect(course, <String, Object?>{
       'title': '系统工程',
       'place': '主楼 101',

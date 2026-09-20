@@ -21,10 +21,13 @@ internal data class WidgetAgendaItem(
     val course: WidgetCourse,
 )
 
+internal data class WidgetStyle(val font: Int = 1, val timeline: Boolean = true, val weekends: Boolean = true)
+private val coursePalette = intArrayOf(0xFFF3ACBC.toInt(), 0xFFB8AFE6.toInt(), 0xFFA6D8E9.toInt(), 0xFFF5CB9D.toInt(), 0xFFACD8C2.toInt())
+private fun courseColor(course: WidgetCourse) = coursePalette[Math.floorMod(course.title.hashCode(), coursePalette.size)]
+
 /** RemoteViews 只负责容器；课表网格由一张按组件实际尺寸生成的图片承载。 */
-internal fun renderScheduleWidget(selection: WidgetSelection, width: Int, height: Int): Bitmap {
+internal fun renderScheduleWidget(selection: WidgetSelection, width: Int, height: Int, style: WidgetStyle = WidgetStyle(), headerOnly: Boolean = false): Bitmap {
     val week = selection.week
-    if (width < 240 || height < 230) return renderCompactWeek(week, width, height)
     val scale = 2f
     val bitmap = Bitmap.createBitmap(width * scale.toInt(), height * scale.toInt(), Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap).apply { scale(scale, scale) }
@@ -36,23 +39,25 @@ internal fun renderScheduleWidget(selection: WidgetSelection, width: Int, height
     val sections = week.sections.ifEmpty {
         (1..12).map { WidgetSection(it, "--:--", "--:--") }
     }
-    val left = 38f
+    val left = if (style.timeline) 38f else 16f
     val top = 30f
-    val column = (width - left) / 7f
+    val dayCount = if (style.weekends) 7 else 5
+    val column = (width - left) / dayCount
     val row = (height - top) / sections.size.coerceAtLeast(1)
     val dates = weekDates(week)
-    "一二三四五六日".forEachIndexed { index, day ->
+    "一二三四五六日".take(dayCount).forEachIndexed { index, day ->
         val center = left + column * (index + .5f)
         text.textAlign = Paint.Align.CENTER
         text.textSize = 10f
         canvas.drawText("周$day", center, 11f, text)
         canvas.drawText(dates.getOrNull(index).orEmpty(), center, 25f, text)
     }
+    if (headerOnly) return bitmap
     paint.color = Color.rgb(220, 229, 241)
     for (index in 0..sections.size) {
         canvas.drawLine(left, top + index * row, width.toFloat(), top + index * row, paint)
     }
-    for (index in 0..7) {
+    for (index in 0..dayCount) {
         canvas.drawLine(left + index * column, top, left + index * column, height.toFloat(), paint)
     }
     sections.forEachIndexed { index, section ->
@@ -61,10 +66,13 @@ internal fun renderScheduleWidget(selection: WidgetSelection, width: Int, height
         text.textSize = 8f
         canvas.drawText(section.number.toString(), 5f, y + row * .6f, text)
         text.textSize = 7f
-        canvas.drawText(section.start.ifEmpty { "--:--" }, 24f, y + row * .42f, text)
-        canvas.drawText(section.end.ifEmpty { "--:--" }, 24f, y + row * .92f, text)
+        if (style.timeline) {
+            text.textSize = (row * .32f).coerceIn(4f, 7f)
+            canvas.drawText(section.start.ifEmpty { "--:--" }, 24f, y + row * .42f, text)
+            canvas.drawText(section.end.ifEmpty { "--:--" }, 24f, y + row * .92f, text)
+        }
     }
-    for (day in 1..7) {
+    for (day in 1..dayCount) {
         val courses = week.courses
             .filter { it.day == day && it.begin != null }
             .sortedBy { it.begin }
@@ -95,6 +103,7 @@ internal fun renderScheduleWidget(selection: WidgetSelection, width: Int, height
                     top = top,
                     column = column,
                     row = row,
+                    fontSize = (7 + style.font * 2).toFloat(),
                 )
             }
         }
@@ -120,6 +129,7 @@ private fun drawCourse(
     top: Float,
     column: Float,
     row: Float,
+    fontSize: Float,
 ) {
     val start = sections.indexOfFirst { it.number == course.begin }
     val end = sections.indexOfFirst { it.number == (course.end ?: course.begin) }
@@ -131,7 +141,7 @@ private fun drawCourse(
         left + (day - 1) * column + (lane + 1) * laneWidth - 1f,
         top + (end + 1) * row - 1f,
     )
-    paint.color = Color.rgb(222, 234, 253)
+    paint.color = courseColor(course)
     canvas.drawRoundRect(rect, 4f, 4f, paint)
     drawWidgetText(
         canvas,
@@ -140,75 +150,39 @@ private fun drawCourse(
         rect.top + 2f,
         (rect.width() - 4f).toInt(),
         (rect.height() - 4f).toInt(),
-        10f,
+        fontSize,
         Layout.Alignment.ALIGN_CENTER,
     )
 }
 
-private fun renderCompactWeek(week: WidgetWeek, width: Int, height: Int): Bitmap {
+internal fun renderAgendaWidget(items: List<WidgetAgendaItem>, width: Int, height: Int,
+    days: Int, filled: Boolean, style: WidgetStyle, today: java.util.Calendar): Bitmap {
     val bitmap = Bitmap.createBitmap(width * 2, height * 2, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap).apply { scale(2f, 2f) }
-    val column = width / 2
-    val row = height / 4
-    for (day in 1..7) {
-        val courses = week.courses.filter { it.day == day }.sortedBy { it.begin }
-        val label = "周${"一二三四五六日"[day - 1]} · ${courses.size}门\n" +
-            courses.joinToString(" / ") { "${it.title} ${it.place.orEmpty()}" }.ifEmpty { "无课" }
-        drawWidgetText(
-            canvas,
-            label,
-            ((day - 1) % 2 * column + 2).toFloat(),
-            ((day - 1) / 2 * row).toFloat(),
-            column - 6,
-            row - 2,
-            10f,
-            Layout.Alignment.ALIGN_NORMAL,
-        )
-    }
-    drawWidgetText(
-        canvas,
-        "点击查看整周\n拉高显示时间网格",
-        (column + 2).toFloat(),
-        (row * 3).toFloat(),
-        column - 6,
-        row - 2,
-        10f,
-        Layout.Alignment.ALIGN_NORMAL,
-    )
-    return bitmap
-}
-
-internal fun renderAgendaWidget(items: List<WidgetAgendaItem>, width: Int, height: Int): Bitmap {
-    val bitmap = Bitmap.createBitmap(width * 2, height * 2, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap).apply { scale(2f, 2f) }
-    if (items.isEmpty()) {
-        drawWidgetText(canvas, "没有已安排课程", 4f, 8f, width - 8, height - 8, 13f, Layout.Alignment.ALIGN_NORMAL)
-        return bitmap
-    }
-    val rows = ((height - 16) / 44).coerceAtLeast(1)
-    items.take(rows).forEachIndexed { index, item ->
-        drawWidgetText(
-            canvas,
-            "${item.date} ${item.start}–${item.end}\n${item.course.title}  ${item.course.place.orEmpty()}",
-            4f,
-            (index * 44).toFloat(),
-            width - 8,
-            42,
-            12f,
-            Layout.Alignment.ALIGN_NORMAL,
-        )
-    }
-    if (items.size > rows) {
-        drawWidgetText(
-            canvas,
-            "另 ${items.size - rows} 门 · 点击查看",
-            4f,
-            (height - 15).toFloat(),
-            width - 8,
-            15,
-            10f,
-            Layout.Alignment.ALIGN_NORMAL,
-        )
+    val columns = if (days > 1 && width >= 240) days else 1
+    val columnWidth = width / columns
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val font = (if (columns > 1) 9 else 12) + style.font
+    for (column in 0 until columns) {
+        val date = (today.clone() as java.util.Calendar).apply { add(java.util.Calendar.DAY_OF_MONTH, column) }
+        val dayItems = if (columns == 1) items else items.filter { it.date == widgetDate(date).takeLast(5) }
+        val left = (column * columnWidth + 4).toFloat()
+        val top = if (columns > 1) 20 else 0
+        if (columns > 1) drawWidgetText(canvas, listOf("今天", "明天", "后天")[column], left, 0f, columnWidth - 8, 18, 10f, Layout.Alignment.ALIGN_NORMAL)
+        if (dayItems.isEmpty()) drawWidgetText(canvas, "暂无课程", left, top + 8f, columnWidth - 8, 40, 12f, Layout.Alignment.ALIGN_NORMAL)
+        val rowHeight = if (height < 180 || columns > 1) 48 else 76
+        val rows = ((height - top - 12) / rowHeight).coerceAtLeast(1)
+        dayItems.take(rows).forEachIndexed { index, item ->
+            val y = (top + index * rowHeight).toFloat()
+            paint.color = courseColor(item.course)
+            canvas.drawRoundRect(RectF(left, y + 2, left + (if (filled) columnWidth - 8 else 4).toFloat(), y + rowHeight - 6), 4f, 4f, paint)
+            val prefix = if (days > 1 && columns == 1) "${item.date} " else ""
+            val titleHeight = if (rowHeight == 48) 16 else 32
+            drawWidgetText(canvas, prefix + item.course.title, left + 10, y + 2, columnWidth - 22, titleHeight, font.toFloat() + 1, Layout.Alignment.ALIGN_NORMAL, bold = true)
+            drawWidgetText(canvas, item.course.place.orEmpty(), left + 10, y + titleHeight + 2, columnWidth - 22, 14, font.toFloat() - 1, Layout.Alignment.ALIGN_NORMAL)
+            if (style.timeline) drawWidgetText(canvas, "${item.start}–${item.end}", left + 10, y + titleHeight + 16, columnWidth - 22, 14, font.toFloat() - 2, Layout.Alignment.ALIGN_NORMAL)
+        }
+        if (dayItems.size > rows) drawWidgetText(canvas, "另 ${dayItems.size - rows} 门 · 点击查看", left, (height - 15).toFloat(), columnWidth - 8, 15, 9f, Layout.Alignment.ALIGN_NORMAL)
     }
     return bitmap
 }
@@ -222,11 +196,13 @@ private fun drawWidgetText(
     height: Int,
     size: Float,
     alignment: Layout.Alignment,
+    bold: Boolean = false,
 ) {
     if (width <= 0 || height <= 0) return
     val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(35, 57, 82)
         textSize = size
+        isFakeBoldText = bold
     }
     @Suppress("DEPRECATION")
     val layout = StaticLayout(value, paint, width, alignment, 1f, 0f, false)

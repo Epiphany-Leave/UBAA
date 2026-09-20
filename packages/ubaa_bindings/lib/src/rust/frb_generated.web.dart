@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/calendar.dart';
 import 'api/client.dart';
 import 'api/read.dart';
 import 'api/simple.dart';
@@ -76,6 +77,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   BridgeBykcSignCourseRequest
   dco_decode_box_autoadd_bridge_bykc_sign_course_request(dynamic raw);
+
+  @protected
+  BridgeCalendarDraft dco_decode_box_autoadd_bridge_calendar_draft(dynamic raw);
 
   @protected
   BridgeCgyyCancelOrderRequest
@@ -203,6 +207,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BridgeBykcUserProfile dco_decode_bridge_bykc_user_profile(dynamic raw);
+
+  @protected
+  BridgeCalendarDraft dco_decode_bridge_calendar_draft(dynamic raw);
 
   @protected
   BridgeCallerPinnedCgyyOrder dco_decode_bridge_caller_pinned_cgyy_order(
@@ -872,6 +879,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BridgeCalendarDraft? dco_decode_opt_box_autoadd_bridge_calendar_draft(
+    dynamic raw,
+  );
+
+  @protected
   BridgeCgyyCancelOrderTarget?
   dco_decode_opt_box_autoadd_bridge_cgyy_cancel_order_target(dynamic raw);
 
@@ -987,6 +999,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   BridgeBykcSignCourseRequest
   sse_decode_box_autoadd_bridge_bykc_sign_course_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BridgeCalendarDraft sse_decode_box_autoadd_bridge_calendar_draft(
     SseDeserializer deserializer,
   );
 
@@ -1162,6 +1179,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BridgeBykcUserProfile sse_decode_bridge_bykc_user_profile(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BridgeCalendarDraft sse_decode_bridge_calendar_draft(
     SseDeserializer deserializer,
   );
 
@@ -2029,6 +2051,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BridgeCalendarDraft? sse_decode_opt_box_autoadd_bridge_calendar_draft(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   BridgeCgyyCancelOrderTarget?
   sse_decode_opt_box_autoadd_bridge_cgyy_cancel_order_target(
     SseDeserializer deserializer,
@@ -2164,6 +2191,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_bridge_bykc_sign_course_request(
     BridgeBykcSignCourseRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_bridge_calendar_draft(
+    BridgeCalendarDraft self,
     SseSerializer serializer,
   );
 
@@ -2362,6 +2395,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_bridge_bykc_user_profile(
     BridgeBykcUserProfile self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bridge_calendar_draft(
+    BridgeCalendarDraft self,
     SseSerializer serializer,
   );
 
@@ -3421,6 +3460,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_bridge_bykc_sign_config(
     BridgeBykcSignConfig? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_bridge_calendar_draft(
+    BridgeCalendarDraft? self,
     SseSerializer serializer,
   );
 

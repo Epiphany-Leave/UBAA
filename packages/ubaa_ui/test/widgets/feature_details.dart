@@ -205,12 +205,12 @@ void _registerFeatureInputTests() {
     await tester.tap(find.widgetWithText(FilterChip, '空间 4 · 时段 6'));
     await tester.pumpAndSettle();
     final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), 'phone-placeholder');
-    await tester.enterText(fields.at(2), '课程讨论');
-    await tester.enterText(fields.at(3), '2');
-    await tester.enterText(fields.at(4), '3');
-    await tester.enterText(fields.at(5), '讨论');
-    await tester.enterText(fields.at(6), '张三');
+    await tester.enterText(fields.at(0), 'phone-placeholder');
+    await tester.enterText(fields.at(1), '课程讨论');
+    await tester.enterText(fields.at(2), '2');
+    await tester.enterText(fields.at(3), '3');
+    await tester.enterText(fields.at(4), '讨论');
+    await tester.enterText(fields.at(5), '张三');
     await tester.tap(find.text('继续确认'));
     await tester.pumpAndSettle();
     expect(prepareCalls, 1);
@@ -316,9 +316,14 @@ void _registerFeatureInputTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('准备阳光打卡'));
     await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), '2026-09-01 08:00');
-    await tester.enterText(fields.at(2), '2026-09-01 09:00');
+    await tester.enterText(
+      find.widgetWithText(TextField, '开始时间'),
+      '2026-09-01 08:00',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '结束时间'),
+      '2026-09-01 09:00',
+    );
     await tester.tap(find.text('选择照片'));
     await tester.pumpAndSettle();
     expect(find.text('已选择照片：photo-placeholder.png'), findsOneWidget);
@@ -552,10 +557,13 @@ void _registerFeatureCollectionTests() {
     await tester.tap(find.byTooltip('下一页'));
     await tester.pumpAndSettle();
     expect(find.text('课程 21'), findsOneWidget);
+    await tester.tap(find.byTooltip('搜索当前结果'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '课程 1');
+    await tester.tap(find.text('完成'));
     await tester.pumpAndSettle();
     expect(find.text('1 / 2'), findsNothing);
-    expect(find.text('课程 1'), findsNWidgets(2));
+    expect(find.text('课程 1'), findsOneWidget);
   });
 
   testWidgets('超长详情列表只保留当前分页避免页面节点累积', (tester) async {
@@ -650,7 +658,9 @@ void _registerFeatureCollectionTests() {
     );
     await tester.tap(find.text('博雅课程'));
     await tester.pumpAndSettle();
-    expect(find.text('第 1 / 3 页（共 41 条）'), findsOneWidget);
+    await tester.tap(find.text('选择课程'));
+    await tester.pumpAndSettle();
+    expect(find.text('第 1 / 3 页'), findsOneWidget);
     await tester.tap(find.byTooltip('下一页').last);
     await tester.pumpAndSettle();
     expect(received?.page, 2);
@@ -692,13 +702,8 @@ void _registerFeatureCollectionTests() {
     );
     await tester.tap(find.text('空教室查询'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, '2026-09-02');
-    await tester.tap(find.text('校区 1'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('校区 2'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('应用筛选'));
-    await tester.tap(find.text('应用筛选'));
+    await _chooseClassroomDate(tester, '09/02/2026');
+    await tester.tap(find.text('沙河'));
     await tester.pumpAndSettle();
     expect(received?.date, DateTime(2026, 9, 2));
     expect(received?.campus, 2);
@@ -740,23 +745,23 @@ void _registerFeatureCollectionTests() {
     );
     await tester.tap(find.text('空教室查询'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextField).first,
-      '2026-09-02T12:00:00+08:00',
-    );
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.byIcon(Icons.date_range));
     await tester.pumpAndSettle();
-
-    expect(received, isNull);
-    expect(find.text('日期格式无效，请使用 YYYY-MM-DD。'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField).first, '2026-02-30');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    for (final invalid in ['not-a-date', '02/30/2026']) {
+      await tester.enterText(find.byType(TextFormField), invalid);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(received, isNull);
+    }
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(received, isNull);
   });
 
-  testWidgets('空教室查询控件提交楼层和节次本地筛选参数', (tester) async {
+  testWidgets('空教室楼栋与搜索筛选留在本地', (tester) async {
     final snapshots = <FeatureId, FeatureSnapshot>{
       for (final feature in FeatureId.values)
         feature: FeatureSnapshot(
@@ -764,7 +769,10 @@ void _registerFeatureCollectionTests() {
           status: FeatureLoadStatus.success,
           summary: '已加载',
           details: feature == FeatureId.classroom
-              ? const <FeatureDetail>[FeatureDetail(title: '主楼 101')]
+              ? const <FeatureDetail>[
+                  FeatureDetail(title: '主楼 101', subtitle: '主楼'),
+                  FeatureDetail(title: '新主楼 201', subtitle: '新主楼'),
+                ]
               : const <FeatureDetail>[],
         ),
     };
@@ -792,13 +800,12 @@ void _registerFeatureCollectionTests() {
     );
     await tester.tap(find.text('空教室查询'));
     await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), 'F2');
-    await tester.enterText(fields.at(2), '3');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.widgetWithText(FilterChip, '新主楼'));
+    await tester.enterText(find.byType(TextField), '201');
     await tester.pumpAndSettle();
-    expect(received?.floorId, 'F2');
-    expect(received?.section, '3');
+    expect(find.text('新主楼 201'), findsOneWidget);
+    expect(find.text('主楼 101'), findsNothing);
+    expect(received, isNull);
   });
 
   testWidgets('查询失败重试会复用当前 typed 查询而不是退回摘要', (tester) async {
@@ -840,10 +847,9 @@ void _registerFeatureCollectionTests() {
     );
     await tester.tap(find.text('空教室查询'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(1), 'F2');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('沙河'));
     await tester.pumpAndSettle();
-    expect(applied?.floorId, 'F2');
+    expect(applied?.campus, 2);
 
     snapshots = {
       for (final feature in FeatureId.values)
@@ -883,9 +889,9 @@ void _registerFeatureCollectionTests() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('重试'));
+    await tester.tap(find.text('查询失败，重试'));
     await tester.pumpAndSettle();
     expect(retryCalls, 0);
-    expect(applied?.floorId, 'F2');
+    expect(applied?.campus, 2);
   });
 }

@@ -11,9 +11,11 @@ class _HomeView extends StatelessWidget {
     this.onDismissGradeChanges,
     this.onLoadYgdkReminder,
     this.onSaveYgdkReminder,
+    this.currentTime,
   });
 
   final UserSummary? user;
+  final DateTime? currentTime;
   final Map<FeatureId, FeatureSnapshot> snapshots;
   final ValueChanged<FeatureId> onFeatureTap;
   final VoidCallback onAllFeatures;
@@ -25,7 +27,7 @@ class _HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = currentTime ?? DateTime.now();
     final colors = Theme.of(context).colorScheme;
     final schedule =
         snapshots[FeatureId.schedule] ??

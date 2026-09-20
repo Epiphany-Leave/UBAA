@@ -201,7 +201,8 @@ void _registerYgdkWriteResultTests() {
     expect(discardedIntentIds, const <String>['wrong-domain-intent']);
     expect(commitCalls, 0);
     expect(find.text('确认提交'), findsNothing);
-    expect(find.text('暂时无法准备阳光打卡；尚未提交任何写请求。'), findsOneWidget);
+    expect(find.textContaining('错误代码：internal_error'), findsOneWidget);
+    expect(find.textContaining('内部错误'), findsWidgets);
   });
 
   testWidgets('阳光打卡回读能力在提交期间丢失时不虚称已尝试', (tester) async {
@@ -392,9 +393,14 @@ void _registerYgdkWriteResultTests() {
     );
 
     await _openAndFillYgdkForm(tester);
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), ' 2026-09-01 08:00 ');
-    await tester.enterText(fields.at(2), ' 2026-09-01 09:00 ');
+    await tester.enterText(
+      find.widgetWithText(TextField, '开始时间'),
+      ' 2026-09-01 08:00 ',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '结束时间'),
+      ' 2026-09-01 09:00 ',
+    );
     await tester.tap(find.text('继续确认'));
     await tester.pumpAndSettle();
 
@@ -601,9 +607,14 @@ Future<void> _openAndFillYgdkForm(WidgetTester tester) async {
   await _openYgdkDetails(tester);
   await tester.tap(find.text('准备阳光打卡'));
   await tester.pumpAndSettle();
-  final fields = find.byType(TextField);
-  await tester.enterText(fields.at(1), '2026-09-01 08:00');
-  await tester.enterText(fields.at(2), '2026-09-01 09:00');
+  await tester.enterText(
+    find.widgetWithText(TextField, '开始时间'),
+    '2026-09-01 08:00',
+  );
+  await tester.enterText(
+    find.widgetWithText(TextField, '结束时间'),
+    '2026-09-01 09:00',
+  );
   await tester.tap(find.text('选择照片'));
   await tester.pumpAndSettle();
 }

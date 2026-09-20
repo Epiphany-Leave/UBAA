@@ -1,5 +1,7 @@
 # 当前迁移与交付状态
 
+2026-09-20 ui25：博雅详情/已选课程接入可选手机日历冲突检测、课程日程与预告选课提醒；时间转换和重叠判断经 Rust facade/bridge，Android 系统日历编辑页负责保存，iOS EventKit/EventKitUI 适配已编写。日历不上传、不落盘、不进入诊断；本科/研究生数据层不变。Pixel 8 待用户安装 `output/UBAA2-pixel8-boya-calendar-ui25.apk` 验证；iOS 尚未在 Mac/Xcode 编译或真机验证。检查结果与手动步骤见 [日历验收记录](evidence/2026-09-20-boya-calendar.md)。
+
 ui22 构建交付：`output/UBAA2-pixel8-secure-storage-ui22.apk`，154432016 字节，Android x64 debug，应用名 UBAA。全量 `just check` 仍在 references shell 自测因 `/tmp` 与 Windows Temp 表达差异失败；日志 `output/secure-storage-ui22-check.log`。真实 Keystore 能力由运行时加解密探测，持久化行为由用户在 Pixel 8 上确认；其他平台安全存储不在此次范围。
 
 2026-09-19 ui22：接通 Android Keystore 安全凭据存储，使用 AES-256-GCM、固定命名空间 AAD 与随机 IV，加密结果原子写入 noBackupFilesDir；只有用户选择记住密码/自动登录才保存。原生能力探测实际执行加解密回环，错误不泄漏凭据或降级明文。此能力仅为账号密码保险箱，不改变 Rust Core 的 Session/Cookie。按用户确认，“更新课表”改名“本地化课表”并同步说明、组件空态文字，首次自动导入保留。研讨室改为 UBAA-PR 高级功能入口的日历图标。17 项凭据/通道测试、64 项控制器测试、3 项课表 UI 测试通过，UI analyze、refs、敏感扫描和 diff 检查通过；真实 Android 保存/重开恢复/清除仍待 Pixel 8 验证。
@@ -127,3 +129,6 @@ Android x86_64 debug 构建与敏感信息/diff 检查通过，ui15 APK 已生�
 本轮 `output/UBAA2-pixel8-ygdk-ui15.apk`：阳光打卡概览展示官方学期认定次数和可选本周统计；新增概览/历史记录快捷入口，历史紧凑卡片点击展示完整资料。保留通用搜索、服务端分页及原有项目打卡入口。记录详情补齐 Bridge 已有的项目编号、状态编号；不推测编号业务含义。未引入新协议、依赖或系统权限。
 
 验证：新增阳光页面测试、4 项 App 阳光映射测试通过，App/UI analyze 通过。扩展 UI 阳光回归 3 通过、9 失败，涉及照片预览、表单及旧筛选入口断言，未作为本轮已通过证据。refs 报告 ubaa_old 未提交修改；真实账号验证仍由用户完成。
+# 2026-09-19 桌面组件与设置
+
+按用户截图实现今日课程、近日课程、一周课程、日视图；后两种有每个组件独立的显示学期与样式设置。新增“我的→界面与课表设置”，持久化模式、颜色、字号、时间轴、周末、周次缩略图与行高。详见 [实现记录](evidence/2026-09-19-widgets-settings.md)。本轮基于 migration/UBAA2 当前源码，保留之前已完成的照片、身份、安全存储等修复，未修改 Core 业务。

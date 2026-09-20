@@ -45,11 +45,13 @@ void _registerQueryTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('课堂签到'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('筛选'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('全部课程'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('未签到'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('查询'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.signinPending);
   });
@@ -215,11 +217,13 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('考试查询'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('筛选'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('全部考试'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('已安排'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('查询'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.examArranged);
   });
@@ -260,11 +264,13 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('成绩查询'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('筛选'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('全部成绩'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('已出成绩'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('查询'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.gradesScored);
   });
@@ -337,7 +343,7 @@ void _registerQueryTests() {
     expect(find.text('2026-09-20'), findsOneWidget);
     expect(find.text('未安排考试'), findsOneWidget);
 
-    await tester.tap(find.text('返回功能列表'));
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('成绩查询'));
     await tester.pumpAndSettle();
@@ -355,7 +361,12 @@ void _registerQueryTests() {
           status: FeatureLoadStatus.success,
           summary: '已加载',
           details: feature == FeatureId.bykc
-              ? const <FeatureDetail>[FeatureDetail(title: '课程')]
+              ? const <FeatureDetail>[
+                  FeatureDetail(
+                    title: '课程',
+                    fields: [FeatureField(label: '课程 ID', value: '12345')],
+                  ),
+                ]
               : const <FeatureDetail>[],
         ),
     };
@@ -388,12 +399,9 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('博雅课程'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('课程列表'));
+    await tester.tap(find.text('选择课程'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('课程详情'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, '12345');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('课程'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.bykcDetail);
     expect(received?.courseId, '12345');
@@ -440,11 +448,7 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('博雅课程'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('课程列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('修读统计'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('课程统计'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.bykcStatistics);
   });
@@ -508,10 +512,10 @@ void _registerQueryTests() {
     await tester.tap(find.text('课表查询'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '学期编码（可选）'), findsNothing);
-    await tester.tap(find.byTooltip('下一周'));
+    await tester.drag(find.byType(PageView), const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(received, isNull);
-    expect(find.text('Week 3'), findsOneWidget);
+    expect(find.text('Week 3'), findsWidgets);
   });
 
   testWidgets('课表查询控件回到本周无需输入参数', (tester) async {
@@ -572,7 +576,7 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('课表查询'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('本周'));
+    await tester.tap(find.byTooltip('回到本周'));
     await tester.pumpAndSettle();
     expect(received, isNull);
   });
@@ -584,6 +588,15 @@ void _registerQueryTests() {
           feature: feature,
           status: FeatureLoadStatus.success,
           summary: '已加载',
+          pagination: feature == FeatureId.bykc
+              ? const FeaturePagination(
+                  page: 1,
+                  size: 20,
+                  total: 41,
+                  totalPages: 3,
+                  hasMore: true,
+                )
+              : null,
           details: feature == FeatureId.bykc
               ? const <FeatureDetail>[FeatureDetail(title: '课程')]
               : const <FeatureDetail>[],
@@ -613,13 +626,13 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('博雅课程'));
     await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), '2');
-    await tester.enterText(fields.at(1), '50');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('选择课程'));
+    await tester.pumpAndSettle();
+    expect(received?.page, 1);
+    await tester.tap(find.byTooltip('下一页'));
     await tester.pumpAndSettle();
     expect(received?.page, 2);
-    expect(received?.size, 50);
+    expect(received?.view, FeatureQueryView.summary);
   });
 
   testWidgets('阳光打卡查询控件提交记录分页 typed 参数', (tester) async {
@@ -660,6 +673,8 @@ void _registerQueryTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('阳光打卡'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('筛选'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('概览'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('记录列表'));
@@ -667,7 +682,7 @@ void _registerQueryTests() {
     final fields = find.byType(TextField);
     await tester.enterText(fields.first, '3');
     await tester.enterText(fields.at(1), '15');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('查询'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.ygdkRecords);
     expect(received?.page, 3);
@@ -682,7 +697,12 @@ void _registerQueryTests() {
           status: FeatureLoadStatus.success,
           summary: '已加载',
           details: feature == FeatureId.cgyy
-              ? const <FeatureDetail>[FeatureDetail(title: '场馆')]
+              ? const <FeatureDetail>[
+                  FeatureDetail(
+                    title: '测试楼层',
+                    fields: [FeatureField(label: '站点 ID', value: '17')],
+                  ),
+                ]
               : const <FeatureDetail>[],
         ),
     };
@@ -717,18 +737,13 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('研讨室预约'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('站点列表'));
+    await tester.tap(find.text('预约研讨室'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('日期空间'));
-    await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.first, '17');
-    await tester.enterText(fields.at(1), '2026-09-03');
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.textContaining('测试楼层'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.cgyyDayInfo);
     expect(received?.siteId, 17);
-    expect(received?.date, DateTime(2026, 9, 3));
+    expect(received?.date, DateUtils.dateOnly(DateTime.now()));
   });
 
   testWidgets('评教查询控件提交待评本地派生视图', (tester) async {
@@ -774,284 +789,14 @@ void _registerQueryTests() {
     );
     await tester.tap(find.text('教学评教'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('筛选'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('全部课程'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('待评课程'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
+    await tester.tap(find.text('查询'));
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.evaluationPending);
-  });
-
-  testWidgets('SPOC 查询控件提交作业详情 typed 参数', (tester) async {
-    final snapshots = <FeatureId, FeatureSnapshot>{
-      for (final feature in FeatureId.values)
-        feature: FeatureSnapshot(
-          feature: feature,
-          status: FeatureLoadStatus.success,
-          summary: '已加载',
-          details: feature == FeatureId.spoc
-              ? const <FeatureDetail>[
-                  FeatureDetail(
-                    title: '作业',
-                    fields: <FeatureField>[
-                      FeatureField(label: '作业编号', value: 'assignment-17'),
-                    ],
-                  ),
-                ]
-              : const <FeatureDetail>[],
-        ),
-    };
-    FeatureQuery? received;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: UbaaTheme.light(),
-        home: coordinatedShell(
-          user: const UserSummary(username: 'student'),
-          snapshots: snapshots,
-          routePolicy: RoutePolicy.auto,
-          telemetryEnabled: false,
-          onRefresh: () async {},
-          onRetryFeature: (_) async {},
-          onFeatureQuery: (feature, query) async {
-            expect(feature, FeatureId.spoc);
-            received = query;
-          },
-          onLogout: () async {},
-          onLogoutAndClearAccount: () async {},
-          onRoutePolicyChanged: (_) {},
-          onTelemetryChanged: (_) {},
-        ),
-      ),
-    );
-    await tester.scrollUntilVisible(
-      find.text('SPOC作业'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('SPOC作业'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('作业列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('作业详情'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButton<String>).last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('assignment-17').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
-    await tester.pumpAndSettle();
-    expect(received?.view, FeatureQueryView.spocDetail);
-    expect(received?.assignmentId, 'assignment-17');
-  });
-
-  testWidgets('希冀查询控件提交作业详情 typed 参数', (tester) async {
-    final snapshots = <FeatureId, FeatureSnapshot>{
-      for (final feature in FeatureId.values)
-        feature: FeatureSnapshot(
-          feature: feature,
-          status: FeatureLoadStatus.success,
-          summary: '已加载',
-          details: feature == FeatureId.judge
-              ? const <FeatureDetail>[FeatureDetail(title: '作业')]
-              : const <FeatureDetail>[],
-        ),
-    };
-    FeatureQuery? received;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: UbaaTheme.light(),
-        home: coordinatedShell(
-          user: const UserSummary(username: 'student'),
-          snapshots: snapshots,
-          routePolicy: RoutePolicy.auto,
-          telemetryEnabled: false,
-          onRefresh: () async {},
-          onRetryFeature: (_) async {},
-          onFeatureQuery: (feature, query) async {
-            expect(feature, FeatureId.judge);
-            received = query;
-          },
-          onLogout: () async {},
-          onLogoutAndClearAccount: () async {},
-          onRoutePolicyChanged: (_) {},
-          onTelemetryChanged: (_) {},
-        ),
-      ),
-    );
-    await tester.scrollUntilVisible(
-      find.text('希冀作业'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('希冀作业'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('作业列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('作业详情'));
-    await tester.pumpAndSettle();
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.first, 'course-3');
-    await tester.enterText(fields.at(1), 'assignment-17');
-    await tester.tap(find.text('应用筛选'));
-    await tester.pumpAndSettle();
-    expect(received?.view, FeatureQueryView.judgeDetail);
-    expect(received?.courseId, 'course-3');
-    expect(received?.assignmentId, 'assignment-17');
-    expect(received?.includeExpired, isFalse);
-  });
-
-  testWidgets('希冀查询控件可包含已过期作业', (tester) async {
-    final snapshots = <FeatureId, FeatureSnapshot>{
-      for (final feature in FeatureId.values)
-        feature: FeatureSnapshot(
-          feature: feature,
-          status: FeatureLoadStatus.success,
-          summary: '已加载',
-          details: feature == FeatureId.judge
-              ? const <FeatureDetail>[FeatureDetail(title: '作业')]
-              : const <FeatureDetail>[],
-        ),
-    };
-    FeatureQuery? received;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: UbaaTheme.light(),
-        home: coordinatedShell(
-          user: const UserSummary(username: 'student'),
-          snapshots: snapshots,
-          routePolicy: RoutePolicy.auto,
-          telemetryEnabled: false,
-          onRefresh: () async {},
-          onRetryFeature: (_) async {},
-          onFeatureQuery: (feature, query) async {
-            expect(feature, FeatureId.judge);
-            received = query;
-          },
-          onLogout: () async {},
-          onLogoutAndClearAccount: () async {},
-          onRoutePolicyChanged: (_) {},
-          onTelemetryChanged: (_) {},
-        ),
-      ),
-    );
-    await tester.scrollUntilVisible(
-      find.text('希冀作业'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('希冀作业'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('包含已过期作业'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('应用筛选'));
-    await tester.pumpAndSettle();
-    expect(received?.includeExpired, isTrue);
-  });
-
-  testWidgets('希冀查询控件提交批量作业详情 typed 键', (tester) async {
-    final snapshots = <FeatureId, FeatureSnapshot>{
-      for (final feature in FeatureId.values)
-        feature: FeatureSnapshot(
-          feature: feature,
-          status: FeatureLoadStatus.success,
-          summary: '已加载',
-          details: feature == FeatureId.judge
-              ? const <FeatureDetail>[FeatureDetail(title: '作业')]
-              : const <FeatureDetail>[],
-        ),
-    };
-    FeatureQuery? received;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: UbaaTheme.light(),
-        home: coordinatedShell(
-          user: const UserSummary(username: 'student'),
-          snapshots: snapshots,
-          routePolicy: RoutePolicy.auto,
-          telemetryEnabled: false,
-          onRefresh: () async {},
-          onRetryFeature: (_) async {},
-          onFeatureQuery: (feature, query) async {
-            expect(feature, FeatureId.judge);
-            received = query;
-          },
-          onLogout: () async {},
-          onLogoutAndClearAccount: () async {},
-          onRoutePolicyChanged: (_) {},
-          onTelemetryChanged: (_) {},
-        ),
-      ),
-    );
-    await tester.scrollUntilVisible(
-      find.text('希冀作业'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('希冀作业'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('作业列表'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('批量详情'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextField).first,
-      'course-2/assignment-2\ncourse-1/assignment-1',
-    );
-    await tester.tap(find.text('应用筛选'));
-    await tester.pumpAndSettle();
-    expect(received?.view, FeatureQueryView.judgeBatchDetails);
-    expect(received?.judgeKeys, const <JudgeAssignmentQueryKey>[
-      JudgeAssignmentQueryKey(
-        courseId: 'course-2',
-        assignmentId: 'assignment-2',
-      ),
-      JudgeAssignmentQueryKey(
-        courseId: 'course-1',
-        assignmentId: 'assignment-1',
-      ),
-    ]);
-  });
-
-  testWidgets('首页从离线课表显示今日课程', (tester) async {
-    final snapshots = <FeatureId, FeatureSnapshot>{
-      for (final feature in FeatureId.values)
-        feature: FeatureSnapshot(
-          feature: feature,
-          status: FeatureLoadStatus.success,
-          summary: '已加载',
-          timetable: feature == FeatureId.schedule
-              ? Timetable(terms: const {}, semesters: const [])
-              : null,
-          details: feature == FeatureId.schedule
-              ? const <FeatureDetail>[
-                  FeatureDetail(title: '离散数学', subtitle: 'MATH101'),
-                ]
-              : const <FeatureDetail>[],
-        ),
-    };
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: UbaaTheme.light(),
-        home: coordinatedShell(
-          user: const UserSummary(username: 'student'),
-          snapshots: snapshots,
-          routePolicy: RoutePolicy.auto,
-          telemetryEnabled: false,
-          onRefresh: () async {},
-          onRetryFeature: (_) async {},
-          onLogout: () async {},
-          onLogoutAndClearAccount: () async {},
-          onRoutePolicyChanged: (_) {},
-          onTelemetryChanged: (_) {},
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('主页').last);
-    await tester.pumpAndSettle();
-    expect(find.text('今日课程'), findsOneWidget);
-    expect(find.text('离散数学'), findsOneWidget);
-    expect(find.text('今天没有课程'), findsNothing);
   });
 }

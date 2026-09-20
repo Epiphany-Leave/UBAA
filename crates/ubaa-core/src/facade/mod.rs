@@ -1,5 +1,7 @@
 //! CLI 与未来绑定层使用的稳定 facade。
 mod auth;
+mod calendar;
+pub use calendar::{CalendarDraft, bykc_calendar_draft, calendar_overlaps};
 mod client;
 mod diagnostic;
 mod read;

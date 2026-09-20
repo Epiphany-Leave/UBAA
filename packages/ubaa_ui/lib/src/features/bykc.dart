@@ -9,6 +9,7 @@ class _BykcView extends StatefulWidget {
     this.initialQuery,
     this.onWrite,
     this.onSignWrite,
+    this.calendar,
   });
 
   final FeatureSnapshot snapshot;
@@ -18,6 +19,7 @@ class _BykcView extends StatefulWidget {
   final Future<void> Function(FeatureQuery) onQuery;
   final Future<void> Function(WriteOperation operation, int courseId)? onWrite;
   final BykcSignStarter? onSignWrite;
+  final BoyaCalendarActions? calendar;
 
   @override
   State<_BykcView> createState() => _BykcViewState();
@@ -41,6 +43,10 @@ class _BykcViewState extends State<_BykcView> {
     if (_view == FeatureQueryView.summary) {
       _courses = widget.snapshot.details;
       _pagination = widget.snapshot.pagination;
+    }
+    if (_view == FeatureQueryView.bykcChosenCourses &&
+        widget.snapshot.status == FeatureLoadStatus.success) {
+      _chosen = widget.snapshot.details;
     }
   }
 
@@ -218,6 +224,7 @@ class _BykcViewState extends State<_BykcView> {
           for (final course in _chosen)
             _BykcChosenCard(
               detail: course,
+              calendar: widget.calendar,
               onWrite: widget.onWrite,
               onSignWrite: widget.onSignWrite,
             ),
@@ -380,6 +387,14 @@ class _BykcViewState extends State<_BykcView> {
           ],
         ),
         const SizedBox(height: 20),
+        if (widget.calendar case final calendar?)
+          BoyaCalendarCard(
+            key: ValueKey(_academicField(detail, '课程 ID')),
+            course: detail,
+            actions: calendar,
+            selected: selected,
+            preview: _academicField(detail, '状态') == 'preview',
+          ),
         FilledButton.icon(
           onPressed: !enabled
               ? null
@@ -576,7 +591,13 @@ class _BykcDetailSection extends StatelessWidget {
 }
 
 class _BykcChosenCard extends StatelessWidget {
-  const _BykcChosenCard({required this.detail, this.onWrite, this.onSignWrite});
+  const _BykcChosenCard({
+    required this.detail,
+    this.onWrite,
+    this.onSignWrite,
+    this.calendar,
+  });
+  final BoyaCalendarActions? calendar;
   final FeatureDetail detail;
   final Future<void> Function(WriteOperation operation, int courseId)? onWrite;
   final BykcSignStarter? onSignWrite;
@@ -608,6 +629,14 @@ class _BykcChosenCard extends StatelessWidget {
             if (_academicField(detail, '开始') case final start?)
               Text('时间：$start 至 ${_academicField(detail, '结束') ?? '-'}'),
             const SizedBox(height: 8),
+            if (calendar case final actions?)
+              BoyaCalendarCard(
+                key: ValueKey(_academicField(detail, '课程 ID')),
+                course: detail,
+                actions: actions,
+                selected: true,
+                preview: false,
+              ),
             Wrap(
               spacing: 8,
               runSpacing: 8,

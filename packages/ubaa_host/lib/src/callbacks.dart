@@ -48,15 +48,35 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
   }
 
   Widget _buildApplication() => AnimatedBuilder(
-    animation: _controller,
-    builder: (context, _) => MaterialApp(
-      navigatorKey: _navigatorKey,
-      title: 'UBAA',
-      debugShowCheckedModeBanner: false,
-      theme: UbaaTheme.light(),
-      darkTheme: UbaaTheme.dark(),
-      themeMode: ThemeMode.system,
-      home: Builder(builder: _buildHome),
+    animation: Listenable.merge([_controller, _appearance]),
+    builder: (context, _) => AppearanceScope(
+      settings: _appearance,
+      child: MaterialApp(
+        navigatorKey: _navigatorKey,
+        title: 'UBAA',
+        debugShowCheckedModeBanner: false,
+        theme: UbaaTheme.light().copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppearanceSettings.colors[_appearance.color],
+          ),
+        ),
+        darkTheme: UbaaTheme.dark().copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppearanceSettings.colors[_appearance.color],
+            brightness: Brightness.dark,
+          ),
+        ),
+        themeMode: _appearance.mode,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(
+              MediaQuery.textScalerOf(context).scale(1) * _appearance.fontScale,
+            ),
+          ),
+          child: child!,
+        ),
+        home: Builder(builder: _buildHome),
+      ),
     ),
   );
 
@@ -131,6 +151,8 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
     final hasEvaluationSubmissionCapabilities =
         _controller.hasEvaluationSubmissionBackendCapabilities;
     return UbaaMainShell(
+      key: ValueKey(_controller.user?.username),
+      boyaCalendar: _boyaCalendar,
       user: _controller.user,
       snapshots: _controller.snapshots,
       routePolicy: _controller.loginForm.routePolicy,

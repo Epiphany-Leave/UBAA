@@ -1,6 +1,10 @@
 /// UBAA Flutter 客户端的平台能力边界。
 library;
 
+export 'src/calendar.dart';
+
+export 'src/appearance.dart';
+
 export 'package:ubaa_domain/ubaa_domain.dart' show UiError, UbaaErrorCode;
 export 'src/credentials.dart';
 export 'src/app_information.dart';

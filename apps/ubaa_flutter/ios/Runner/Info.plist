@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCalendarsUsageDescription</key>
+	<string>仅在你点击检测时读取手机日历，显示与博雅课程重叠的个人日程；不上传日历内容。</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>用于读取手机日历并显示与博雅课程重叠的个人日程。添加日程由系统编辑页确认，UBAA 不直接保存或上传日历内容。</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

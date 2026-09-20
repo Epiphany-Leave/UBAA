@@ -17,6 +17,7 @@ Widget coordinatedShell({
   required ValueChanged<bool> onTelemetryChanged,
   // Feature tests start in the full directory; homepage tests opt into tab 0.
   int initialTab = 1,
+  DateTime? currentTime,
   List<ConnectionMode> activeRoutes = const <ConnectionMode>[],
   Future<void> Function(FeatureId, FeatureQuery)? onFeatureQuery,
   Future<WriteIntent> Function(WriteOperation, int)? onPrepareBykcWrite,
@@ -40,6 +41,7 @@ Widget coordinatedShell({
 }) => _WriteHarness(
   key: key,
   shell: UbaaMainShell(
+    currentTime: currentTime,
     user: user,
     snapshots: snapshots,
     routePolicy: routePolicy,
@@ -119,6 +121,7 @@ class _WriteHarnessState extends State<_WriteHarness> {
     builder: (context, _) {
       final shell = widget.shell;
       return UbaaMainShell(
+        currentTime: widget.shell.currentTime,
         user: shell.user,
         snapshots: shell.snapshots,
         routePolicy: shell.routePolicy,

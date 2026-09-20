@@ -2,6 +2,10 @@ part of 'ubaa_app_host.dart';
 
 class _UbaaAppHostState extends State<UbaaAppHost> with WidgetsBindingObserver {
   late final AppController _controller;
+  late final BoyaCalendarActions _boyaCalendar = createBoyaCalendarActions();
+  final AppearanceSettings _appearance = AppearanceSettings(
+    persist: saveAppearanceSettings,
+  );
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _wasBackgrounded = false;
   bool _resumeRecoveryPending = false;
@@ -15,6 +19,7 @@ class _UbaaAppHostState extends State<UbaaAppHost> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    unawaited(_loadAppearance());
     WidgetsBinding.instance.addObserver(this);
     final backend = widget.backend;
     final backendFactory = widget.backendFactory ?? createProductionBackend;
@@ -34,12 +39,22 @@ class _UbaaAppHostState extends State<UbaaAppHost> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _appearance.dispose();
     _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
     widget.offlineScheduleTarget?.removeListener(_onOfflineScheduleTarget);
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAppearance() async {
+    try {
+      final values = await readAppearanceSettings();
+      if (mounted) _appearance.restore(values);
+    } on Object {
+      // Keep usable defaults when the optional local presentation file is unreadable.
+    }
   }
 
   @override

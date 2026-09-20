@@ -29,6 +29,10 @@ git -C "$origin_work" add reference.txt
 git -C "$origin_work" -c user.name=UBAA -c user.email=ubaa@example.invalid commit -q -m fixture
 locked_commit=$(git -C "$origin_work" rev-parse HEAD)
 git clone -q --bare "$origin_work" "$remote"
+# Git for Windows stores local clone URLs as native absolute paths.
+if command -v cygpath >/dev/null 2>&1; then
+  remote=$(cygpath -m "$remote")
+fi
 
 # 缺失引用只能失败和提示显式 bootstrap，不得创建任何路径。
 missing=$sandbox/missing

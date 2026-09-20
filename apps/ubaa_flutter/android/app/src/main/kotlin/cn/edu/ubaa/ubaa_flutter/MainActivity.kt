@@ -58,6 +58,12 @@ class MainActivity : FlutterActivity() {
         ).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "selectTerm" -> {
+                        getSharedPreferences("schedule_widgets", MODE_PRIVATE).edit()
+                            .putString("activeTerm", call.arguments as? String).apply()
+                        ScheduleWidgetProvider.requestRefresh(this)
+                        result.success(null)
+                    }
                     "syncSchedule" -> runCatching {
                         ScheduleWidgetSnapshot.save(this, call.arguments)
                         ScheduleWidgetProvider.requestRefresh(this)
@@ -102,6 +108,11 @@ class MainActivity : FlutterActivity() {
         widgetChannel?.setMethodCallHandler(null)
         widgetChannel = null
         super.onDestroy()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (photoChannel?.onRequestPermissionsResult(requestCode) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     private fun scheduleTarget(intent: Intent?): Map<String, Any>? {

@@ -717,7 +717,7 @@ pub fn parse_lock_code(body: &str) -> Result<CgyyLockCode> {
             .map(str::to_owned)
     };
     let order = &data["orderView"];
-    let room = ["venueName", "siteName", "venueSpaceName"]
+    let room_name = ["venueName", "siteName", "venueSpaceName"]
         .iter()
         .filter_map(|key| text(&order[*key]))
         .collect::<Vec<_>>()
@@ -728,7 +728,7 @@ pub fn parse_lock_code(body: &str) -> Result<CgyyLockCode> {
             .or_else(|| text(&data["lockCode"]))
             .or_else(|| text(&data["password"])),
         due_date: text(&data["dueDate"]),
-        room: (!room.is_empty()).then_some(room),
+        room: (!room_name.is_empty()).then_some(room_name),
         reservation_time: text(&order["reservationDateDetail"]),
     })
 }

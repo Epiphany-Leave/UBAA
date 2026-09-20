@@ -32,6 +32,7 @@ void _registerGoldenTests() {
       MaterialApp(
         theme: UbaaTheme.light(),
         home: coordinatedShell(
+          currentTime: DateTime(2026, 9, 14),
           initialTab: 0,
           user: const UserSummary(username: 'student', displayName: '测试同学'),
           snapshots: snapshots,
@@ -95,6 +96,7 @@ void _registerGoldenTests() {
         MaterialApp(
           theme: UbaaTheme.light(),
           home: coordinatedShell(
+            currentTime: DateTime(2026, 9, 14),
             key: ValueKey<int>(initialTab),
             user: const UserSummary(username: 'student', displayName: '测试同学'),
             snapshots: snapshots,
@@ -120,12 +122,12 @@ void _registerGoldenTests() {
       await tester.ensureVisible(target);
       await tester.tap(target);
       await tester.pumpAndSettle();
-      expect(find.text('返回功能列表'), findsOneWidget);
+      expect(find.byTooltip('返回'), findsOneWidget);
       await expectLater(
         find.byType(UbaaMainShell),
         matchesGoldenFile('goldens/feature_${feature.name}_light.png'),
       );
-      await tester.tap(find.text('返回功能列表'));
+      await tester.tap(find.byTooltip('返回'));
       await tester.pumpAndSettle();
     }
 
@@ -181,6 +183,7 @@ void _registerGoldenTests() {
           MaterialApp(
             theme: dark ? UbaaTheme.dark() : UbaaTheme.light(),
             home: coordinatedShell(
+              currentTime: DateTime(2026, 9, 14),
               initialTab: 0,
               key: ValueKey<String>('${layout.name}-$themeName'),
               user: const UserSummary(username: 'student', displayName: '测试同学'),
@@ -215,7 +218,7 @@ void _registerGoldenTests() {
 
         await tester.tap(find.text('课表查询').first);
         await tester.pumpAndSettle();
-        expect(find.text('返回功能列表'), findsOneWidget);
+        expect(find.byTooltip('返回'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await expectLater(
           find.byType(UbaaMainShell),

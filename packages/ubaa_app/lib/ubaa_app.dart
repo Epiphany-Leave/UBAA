@@ -1,6 +1,8 @@
 /// UBAA 客户端应用协调层。
 library;
 
+export 'src/calendar.dart';
+
 export 'src/backend.dart';
 export 'src/bridge_backend.dart';
 export 'src/app_controller.dart';

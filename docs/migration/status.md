@@ -1,5 +1,7 @@
 # 当前迁移与交付状态
 
+2026-09-20 PR #97：最新版已上传至 `Epiphany-Leave/UBAA:UBAA2`，向上游 `ubaa2` 创建草稿 PR。语言提交 `9c89a307` 的四项 CI 全通过；另补充 Direct/WebVPN 学业接口失败不跨身份回退的测试，Core 全特性测试通过。上游 41 个后续提交导致 77 个合并冲突，未完成的合并已撤回，PR 暂不可合并；不得把来源分支 CI 当作合并结果验收。详见 [PR 与隔离复核](evidence/2026-09-20-pr97-isolation.md)。
+
 2026-09-20 ui25：博雅详情/已选课程接入可选手机日历冲突检测、课程日程与预告选课提醒；时间转换和重叠判断经 Rust facade/bridge，Android 系统日历编辑页负责保存，iOS EventKit/EventKitUI 适配已编写。日历不上传、不落盘、不进入诊断；本科/研究生数据层不变。Pixel 8 待用户安装 `output/UBAA2-pixel8-boya-calendar-ui25.apk` 验证；iOS 尚未在 Mac/Xcode 编译或真机验证。检查结果与手动步骤见 [日历验收记录](evidence/2026-09-20-boya-calendar.md)。
 
 ui22 构建交付：`output/UBAA2-pixel8-secure-storage-ui22.apk`，154432016 字节，Android x64 debug，应用名 UBAA。全量 `just check` 仍在 references shell 自测因 `/tmp` 与 Windows Temp 表达差异失败；日志 `output/secure-storage-ui22-check.log`。真实 Keystore 能力由运行时加解密探测，持久化行为由用户在 Pixel 8 上确认；其他平台安全存储不在此次范围。

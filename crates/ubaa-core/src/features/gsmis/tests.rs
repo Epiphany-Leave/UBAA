@@ -76,21 +76,45 @@ fn known_student_identity_never_switches_system_on_failure() {
         .enable_all()
         .build()
         .unwrap();
-    for account in [
-        "19000001",
-        "SY2600001",
-        "sy2600001",
-        "Sy2600001",
-        "ZY2600001",
-        "BY2600001",
-    ] {
+    for (mode, account) in [ConnectionMode::Direct, ConnectionMode::WebVpn]
+        .into_iter()
+        .flat_map(|mode| {
+            [
+                "19000001",
+                "SY2600001",
+                "sy2600001",
+                "Sy2600001",
+                "ZY2600001",
+                "BY2600001",
+            ]
+            .into_iter()
+            .map(move |account| (mode, account))
+        })
+    {
         let graduate = account.starts_with(|c: char| c.is_ascii_alphabetic());
-        let (mut client, path) = runtime(ConnectionMode::Direct, move |request| {
-            assert_eq!(
-                request.url.contains("gsmis.buaa.edu.cn"),
-                graduate,
-                "wrong academic system"
+        let term = if graduate { "20261" } else { "2026-2027-1" };
+        let allowed = if graduate {
+            vec!["https://gsmis.buaa.edu.cn/"]
+        } else {
+            vec!["https://byxt.buaa.edu.cn/", "https://app.buaa.edu.cn/"]
+        }
+        .into_iter()
+        .map(|url| {
+            if mode == ConnectionMode::WebVpn {
+                crate::connection::to_webvpn_url(url).unwrap()
+            } else {
+                url.to_owned()
+            }
+        })
+        .collect::<Vec<_>>();
+        let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let recorded = Arc::clone(&calls);
+        let (mut client, path) = runtime(mode, move |request| {
+            assert!(
+                allowed.iter().any(|prefix| request.url.starts_with(prefix)),
+                "wrong academic system or route for {account} in {mode:?}"
             );
+            recorded.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             Ok(HttpResponse::new(503, request.url, vec![]))
         });
         client.remember_account_name(Some(account));
@@ -106,7 +130,35 @@ fn known_student_identity_never_switches_system_on_failure() {
         );
         assert!(
             executor
-                .block_on(crate::features::schedule::get_week(&mut client, "20261", 1))
+                .block_on(crate::features::schedule::get_week(&mut client, term, 1))
+                .is_err()
+        );
+        assert!(
+            executor
+                .block_on(crate::features::schedule::get_weeks(&mut client, term))
+                .is_err()
+        );
+        assert!(
+            executor
+                .block_on(crate::features::schedule::get_today(&mut client))
+                .is_err()
+        );
+        assert!(
+            executor
+                .block_on(crate::features::schedule::get_exam(&mut client, term))
+                .is_err()
+        );
+        assert!(
+            executor
+                .block_on(crate::features::grades::get_grades(&mut client, term))
+                .is_err()
+        );
+        assert!(
+            executor
+                .block_on(crate::features::schedule::import_semester(
+                    &mut client,
+                    Some(term)
+                ))
                 .is_err()
         );
         if graduate {
@@ -116,6 +168,7 @@ fn known_student_identity_never_switches_system_on_failure() {
                     .is_err()
             );
         }
+        assert!(calls.load(std::sync::atomic::Ordering::Relaxed) >= 8);
         let _ = std::fs::remove_dir_all(path);
     }
 }

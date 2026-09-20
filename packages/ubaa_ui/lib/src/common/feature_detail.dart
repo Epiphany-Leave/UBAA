@@ -188,10 +188,15 @@ class _FeatureDetailView extends StatelessWidget {
     return Column(
       children: <Widget>[
         MaterialBanner(
-          content: Text(snapshot.error?.message ?? '刷新失败，以下是上次成功加载的数据。'),
+          content: Text(
+            context.tr(snapshot.error?.message ?? '刷新失败，以下是上次成功加载的数据。'),
+          ),
           leading: const Icon(Icons.sync_problem),
           actions: <Widget>[
-            TextButton(onPressed: () => onRetry(), child: const Text('重试')),
+            TextButton(
+              onPressed: () => onRetry(),
+              child: Text(context.tr('重试')),
+            ),
           ],
         ),
         Expanded(
@@ -213,7 +218,7 @@ class _FeatureDetailView extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 16),
-          Text('暂无${feature.title}数据'),
+          Text(context.tr("暂无{0}数据", [context.tr(feature.title)])),
           if (snapshot.summary case final summary?
               when summary.trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),

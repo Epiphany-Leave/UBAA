@@ -16,7 +16,7 @@ extension _FeatureDetailPagination on _FeatureDetailListState {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             IconButton(
-              tooltip: '上一页',
+              tooltip: context.tr('上一页'),
               onPressed: serverPagination.page <= 1
                   ? null
                   : () => widget.onQuery!(
@@ -25,15 +25,22 @@ extension _FeatureDetailPagination on _FeatureDetailListState {
               icon: const Icon(Icons.chevron_left),
             ),
             Semantics(
-              label: '服务端分页',
+              label: context.tr('服务端分页'),
               child: Text(
                 serverPagination.effectiveTotalPages > 0
-                    ? '第 ${serverPagination.page} / ${serverPagination.effectiveTotalPages} 页（共 ${serverPagination.total} 条）'
-                    : '第 ${serverPagination.page} 页（共 ${serverPagination.total} 条）',
+                    ? context.tr("第 {0} / {1} 页（共 {2} 条）", [
+                        serverPagination.page,
+                        serverPagination.effectiveTotalPages,
+                        serverPagination.total,
+                      ])
+                    : context.tr("第 {0} 页（共 {1} 条）", [
+                        serverPagination.page,
+                        serverPagination.total,
+                      ]),
               ),
             ),
             IconButton(
-              tooltip: '下一页',
+              tooltip: context.tr('下一页'),
               onPressed:
                   !(serverPagination.hasMore ??
                       (serverPagination.effectiveTotalPages > 0 &&
@@ -55,15 +62,18 @@ extension _FeatureDetailPagination on _FeatureDetailListState {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             IconButton(
-              tooltip: '上一页',
+              tooltip: context.tr('上一页'),
               onPressed: page == 0
                   ? null
                   : () => setState(() => _page = page - 1),
               icon: const Icon(Icons.chevron_left),
             ),
-            Semantics(label: '详情分页', child: Text('${page + 1} / $pageCount')),
+            Semantics(
+              label: context.tr('详情分页'),
+              child: Text('${page + 1} / $pageCount'),
+            ),
             IconButton(
-              tooltip: '下一页',
+              tooltip: context.tr('下一页'),
               onPressed: page + 1 >= pageCount
                   ? null
                   : () => setState(() => _page = page + 1),

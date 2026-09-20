@@ -158,24 +158,47 @@ class _BykcViewState extends State<_BykcView> {
                       Expanded(
                         child: Text(
                           _status == null
-                              ? '全部课程'
-                              : '状态：${_statusLabel(_status!)}',
+                              ? context.tr('全部课程')
+                              : context.tr("状态：{0}", [
+                                  context.tr(_statusLabel(_status!)),
+                                ]),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
                       PopupMenuButton<String?>(
-                        tooltip: '筛选课程',
+                        tooltip: context.tr('筛选课程'),
                         icon: const Icon(Icons.tune),
                         initialValue: _status,
                         onSelected: (value) => setState(() => _status = value),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: null, child: Text('全部课程')),
-                          PopupMenuItem(value: 'available', child: Text('可选')),
-                          PopupMenuItem(value: 'preview', child: Text('预告')),
-                          PopupMenuItem(value: 'selected', child: Text('已选')),
-                          PopupMenuItem(value: 'full', child: Text('已满')),
-                          PopupMenuItem(value: 'ended', child: Text('已结束')),
-                          PopupMenuItem(value: 'expired', child: Text('已过期')),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: null,
+                            child: Text(context.tr('全部课程')),
+                          ),
+                          PopupMenuItem(
+                            value: 'available',
+                            child: Text(context.tr('可选')),
+                          ),
+                          PopupMenuItem(
+                            value: 'preview',
+                            child: Text(context.tr('预告')),
+                          ),
+                          PopupMenuItem(
+                            value: 'selected',
+                            child: Text(context.tr('已选')),
+                          ),
+                          PopupMenuItem(
+                            value: 'full',
+                            child: Text(context.tr('已满')),
+                          ),
+                          PopupMenuItem(
+                            value: 'ended',
+                            child: Text(context.tr('已结束')),
+                          ),
+                          PopupMenuItem(
+                            value: 'expired',
+                            child: Text(context.tr('已过期')),
+                          ),
                         ],
                       ),
                     ],
@@ -302,8 +325,10 @@ class _BykcViewState extends State<_BykcView> {
                 Chip(
                   label: Text(
                     selected
-                        ? '已选'
-                        : _statusLabel(_academicField(detail, '状态') ?? '未知'),
+                        ? context.tr('已选')
+                        : context.tr(
+                            _statusLabel(_academicField(detail, '状态') ?? '未知'),
+                          ),
                   ),
                 ),
               ],
@@ -363,7 +388,7 @@ class _BykcViewState extends State<_BykcView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '课程简介',
+                    context.tr('课程简介'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -405,19 +430,19 @@ class _BykcViewState extends State<_BykcView> {
           label: Text(
             enabled
                 ? selected
-                      ? '准备退选'
-                      : '准备选课'
+                      ? context.tr('准备退选')
+                      : context.tr('准备选课')
                 : selected
-                ? '当前不可退选'
-                : '当前不可选课',
+                ? context.tr('当前不可退选')
+                : context.tr('当前不可选课'),
           ),
         ),
         if (!enabled) ...[
           const SizedBox(height: 8),
           Text(
             action == null
-                ? '课程未返回可执行的选课信息，请刷新后重试。'
-                : '当前不在操作时间、课程已满，或选课资格尚未确认。',
+                ? context.tr('课程未返回可执行的选课信息，请刷新后重试。')
+                : context.tr('当前不在操作时间、课程已满，或选课资格尚未确认。'),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -445,7 +470,7 @@ class _BykcViewState extends State<_BykcView> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Text('总体净有效次数'),
+                  Text(context.tr('总体净有效次数')),
                   const SizedBox(height: 4),
                   Text(total, style: Theme.of(context).textTheme.displaySmall),
                 ],
@@ -473,14 +498,14 @@ class _BykcViewState extends State<_BykcView> {
         onRetry: () => _query(FeatureQuery(view: _view)),
       );
     }
-    return Center(child: Text(emptyText));
+    return Center(child: Text(context.tr(emptyText)));
   }
 
   Widget _serverPager(FeaturePagination pagination) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       IconButton(
-        tooltip: '上一页',
+        tooltip: context.tr('上一页'),
         onPressed: pagination.page <= 1
             ? null
             : () => _query(
@@ -491,9 +516,14 @@ class _BykcViewState extends State<_BykcView> {
               ),
         icon: const Icon(Icons.chevron_left),
       ),
-      Text('第 ${pagination.page} / ${pagination.effectiveTotalPages} 页'),
+      Text(
+        context.tr("第 {0} / {1} 页", [
+          pagination.page,
+          pagination.effectiveTotalPages,
+        ]),
+      ),
       IconButton(
-        tooltip: '下一页',
+        tooltip: context.tr('下一页'),
         onPressed:
             !(pagination.hasMore ??
                 pagination.page < pagination.effectiveTotalPages)
@@ -508,263 +538,6 @@ class _BykcViewState extends State<_BykcView> {
       ),
     ],
   );
-}
-
-class _BykcCourseCard extends StatelessWidget {
-  const _BykcCourseCard({required this.detail, required this.onTap});
-  final FeatureDetail detail;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      detail.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (_academicField(detail, '状态') case final status?)
-                    Chip(label: Text(_statusLabel(status))),
-                ],
-              ),
-              if (detail.subtitle case final teacher? when teacher.isNotEmpty)
-                Text('教师：$teacher'),
-              if (_academicField(detail, '地点') case final location?)
-                Text('地点：$location'),
-              if (_academicField(detail, '已选人数') case final count?)
-                Text('人数：$count / ${_academicField(detail, '容量') ?? '-'}'),
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BykcDetailSection extends StatelessWidget {
-  const _BykcDetailSection({required this.title, required this.fields});
-  final String title;
-  final List<(String, String)> fields;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          for (final (label, value) in fields)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: _DetailField(label: label, value: value),
-            ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _BykcChosenCard extends StatelessWidget {
-  const _BykcChosenCard({
-    required this.detail,
-    this.onWrite,
-    this.onSignWrite,
-    this.calendar,
-  });
-  final BoyaCalendarActions? calendar;
-  final FeatureDetail detail;
-  final Future<void> Function(WriteOperation operation, int courseId)? onWrite;
-  final BykcSignStarter? onSignWrite;
-
-  @override
-  Widget build(BuildContext context) {
-    final deselect = detail.action<BykcDeselectAction>();
-    final signIn = _sign(BykcSignKind.signIn);
-    final signOut = _sign(BykcSignKind.signOut);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              detail.title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            if (detail.subtitle case final teacher? when teacher.isNotEmpty)
-              Text('教师：$teacher'),
-            if (_academicField(detail, '地点') case final location?)
-              Text('地点：$location'),
-            if (_academicField(detail, '课程分类') case final category?)
-              Text('分类：$category'),
-            if (_academicField(detail, '开始') case final start?)
-              Text('时间：$start 至 ${_academicField(detail, '结束') ?? '-'}'),
-            const SizedBox(height: 8),
-            if (calendar case final actions?)
-              BoyaCalendarCard(
-                key: ValueKey(_academicField(detail, '课程 ID')),
-                course: detail,
-                actions: actions,
-                selected: true,
-                preview: false,
-              ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (signIn?.eligibility == ActionEligibility.allowed &&
-                    onSignWrite != null)
-                  FilledButton.tonal(
-                    onPressed: () => onSignWrite!(signIn!),
-                    child: const Text('准备签到'),
-                  ),
-                if (signOut?.eligibility == ActionEligibility.allowed &&
-                    onSignWrite != null)
-                  FilledButton.tonal(
-                    onPressed: () => onSignWrite!(signOut!),
-                    child: const Text('准备签退'),
-                  ),
-                if (deselect?.eligibility == ActionEligibility.allowed &&
-                    onWrite != null)
-                  OutlinedButton(
-                    onPressed: () =>
-                        onWrite!(deselect!.operation, deselect.courseId),
-                    child: const Text('准备退选'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  BykcSignAction? _sign(BykcSignKind kind) {
-    for (final action in detail.actions) {
-      if (action is BykcSignAction && action.kind == kind) return action;
-    }
-    return null;
-  }
-}
-
-class _BykcStickyHeader extends SliverPersistentHeaderDelegate {
-  const _BykcStickyHeader({required this.child});
-  final Widget child;
-
-  @override
-  double get minExtent => 60;
-
-  @override
-  double get maxExtent => 60;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) => child;
-
-  @override
-  bool shouldRebuild(covariant _BykcStickyHeader oldDelegate) =>
-      oldDelegate.child != child;
-}
-
-class _BykcStatisticsHeader extends StatelessWidget {
-  const _BykcStatisticsHeader();
-  @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    child: Row(
-      children: [
-        Expanded(flex: 3, child: Text('课程小类')),
-        Expanded(flex: 2, child: Text('通过/指标')),
-        Expanded(flex: 2, child: Text('达标情况')),
-      ],
-    ),
-  );
-}
-
-class _BykcStatisticsRow extends StatelessWidget {
-  const _BykcStatisticsRow({required this.detail});
-  final FeatureDetail detail;
-  @override
-  Widget build(BuildContext context) {
-    final qualified = _academicField(detail, '达标') == '是';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(detail.subtitle ?? detail.title),
-                  if (detail.subtitle != null)
-                    Text(
-                      detail.title,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                '${_academicField(detail, '通过数量') ?? '-'} / ${_academicField(detail, '要求数量') ?? '-'}',
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Row(
-                children: [
-                  Icon(
-                    qualified ? Icons.check_circle : Icons.warning_amber,
-                    color: qualified
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.error,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(qualified ? '达标' : '未达标'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 String _statusLabel(String status) => switch (status) {
@@ -786,26 +559,26 @@ extension _BykcQueryControls on _FeatureQueryControlsState {
             ? null
             : (value) =>
                   setState(() => _bykcView = value ?? FeatureQueryView.summary),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('课程列表'),
+            child: Text(context.tr('课程列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.bykcDetail,
-            child: Text('课程详情'),
+            child: Text(context.tr('课程详情')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.bykcChosenCourses,
-            child: Text('已选课程'),
+            child: Text(context.tr('已选课程')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.bykcStatistics,
-            child: Text('修读统计'),
+            child: Text(context.tr('修读统计')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.bykcProfile,
-            child: Text('个人资料'),
+            child: Text(context.tr('个人资料')),
           ),
         ],
       ),
@@ -815,9 +588,9 @@ extension _BykcQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _pageController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '页码',
-              hintText: '从 1 开始',
+            decoration: InputDecoration(
+              labelText: context.tr('页码'),
+              hintText: context.tr('从 1 开始'),
               isDense: true,
             ),
           ),
@@ -827,8 +600,8 @@ extension _BykcQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _sizeController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '每页数量',
+            decoration: InputDecoration(
+              labelText: context.tr('每页数量'),
               hintText: '1–100',
               isDense: true,
             ),
@@ -841,9 +614,9 @@ extension _BykcQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _bykcCourseController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '课程 ID',
-              hintText: '从课程列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('课程 ID'),
+              hintText: context.tr('从课程列表选择'),
               isDense: true,
             ),
           ),
@@ -885,7 +658,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
                   )
                 : null,
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text('准备选课'),
+            label: Text(context.tr('准备选课')),
           ),
           if (bykcDeselectAction != null || courseId != null)
             OutlinedButton.icon(
@@ -896,7 +669,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
                     )
                   : null,
               icon: const Icon(Icons.remove_circle_outline),
-              label: const Text('准备退选'),
+              label: Text(context.tr('准备退选')),
             ),
         ],
       ),
@@ -904,7 +677,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            '当前课程状态不支持该操作；最终资格和时间窗仍由 Core 校验。',
+            context.tr('当前课程状态不支持该操作；最终资格和时间窗仍由 Core 校验。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -932,7 +705,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
                   ? () => widget.onBykcSignWrite!(bykcSignInAction)
                   : null,
               icon: const Icon(Icons.login),
-              label: const Text('准备博雅签到'),
+              label: Text(context.tr('准备博雅签到')),
             ),
           if (bykcSignOutAction != null)
             OutlinedButton.icon(
@@ -940,7 +713,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
                   ? () => widget.onBykcSignWrite!(bykcSignOutAction)
                   : null,
               icon: const Icon(Icons.logout),
-              label: const Text('准备博雅签退'),
+              label: Text(context.tr('准备博雅签退')),
             ),
         ],
       ),
@@ -949,7 +722,7 @@ extension _BykcDetailActions on _FeatureDetailListState {
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            '当前不在可操作时间窗或状态不允许，具体条件由 Core 判定。',
+            context.tr('当前不在可操作时间窗或状态不允许，具体条件由 Core 判定。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

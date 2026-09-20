@@ -123,7 +123,7 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
             ),
             Expanded(
               child: details.isEmpty
-                  ? const Center(child: Text('没有匹配的详情'))
+                  ? Center(child: Text(context.tr('没有匹配的详情')))
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: visible.length,
@@ -281,7 +281,7 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
             right: 18,
             bottom: 18,
             child: FloatingActionButton(
-              tooltip: '搜索当前结果',
+              tooltip: context.tr('搜索当前结果'),
               onPressed: _showSearch,
               child: const Icon(Icons.search),
             ),
@@ -293,12 +293,12 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
   Future<void> _showSearch() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('搜索当前结果'),
+      title: Text(context.tr('搜索当前结果')),
       content: TextField(
         controller: _queryController,
         autofocus: true,
-        decoration: const InputDecoration(
-          hintText: '输入名称或内容',
+        decoration: InputDecoration(
+          hintText: context.tr('输入名称或内容'),
           prefixIcon: Icon(Icons.search),
         ),
         onChanged: (value) => setState(() {
@@ -314,11 +314,11 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
               setState(() => _query = '');
               Navigator.pop(context);
             },
-            child: const Text('清除'),
+            child: Text(context.tr('清除')),
           ),
         FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('完成'),
+          child: Text(context.tr('完成')),
         ),
       ],
     ),

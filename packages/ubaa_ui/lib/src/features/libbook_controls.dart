@@ -10,23 +10,26 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
             : (value) => setState(
                 () => _libbookView = value ?? FeatureQueryView.summary,
               ),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
-          DropdownMenuItem(value: FeatureQueryView.summary, child: Text('馆列表')),
+        items: <DropdownMenuItem<FeatureQueryView>>[
+          DropdownMenuItem(
+            value: FeatureQueryView.summary,
+            child: Text(context.tr('馆列表')),
+          ),
           DropdownMenuItem(
             value: FeatureQueryView.libbookAreas,
-            child: Text('馆区列表'),
+            child: Text(context.tr('馆区列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.libbookAreaDetail,
-            child: Text('分区详情'),
+            child: Text(context.tr('分区详情')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.libbookSeats,
-            child: Text('座位查询'),
+            child: Text(context.tr('座位查询')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.libbookBookings,
-            child: Text('预约记录'),
+            child: Text(context.tr('预约记录')),
           ),
         ],
       ),
@@ -35,9 +38,9 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 150,
           child: TextField(
             controller: _premisesController,
-            decoration: const InputDecoration(
-              labelText: '馆区 ID',
-              hintText: '从馆列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('馆区 ID'),
+              hintText: context.tr('从馆列表选择'),
               isDense: true,
             ),
           ),
@@ -46,8 +49,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 130,
           child: TextField(
             controller: _storeyController,
-            decoration: const InputDecoration(
-              labelText: '楼层 ID（可选）',
+            decoration: InputDecoration(
+              labelText: context.tr('楼层 ID（可选）'),
               isDense: true,
             ),
           ),
@@ -63,9 +66,9 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 150,
           child: TextField(
             controller: _areaController,
-            decoration: const InputDecoration(
-              labelText: '分区 ID',
-              hintText: '从馆区列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('分区 ID'),
+              hintText: context.tr('从馆区列表选择'),
               isDense: true,
             ),
           ),
@@ -81,9 +84,9 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 150,
           child: TextField(
             controller: _areaController,
-            decoration: const InputDecoration(
-              labelText: '分区 ID',
-              hintText: '从馆区列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('分区 ID'),
+              hintText: context.tr('从馆区列表选择'),
               isDense: true,
             ),
           ),
@@ -92,8 +95,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 140,
           child: TextField(
             controller: _dateController,
-            decoration: const InputDecoration(
-              labelText: '日期',
+            decoration: InputDecoration(
+              labelText: context.tr('日期'),
               hintText: 'YYYY-MM-DD',
               isDense: true,
             ),
@@ -103,8 +106,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 110,
           child: TextField(
             controller: _startController,
-            decoration: const InputDecoration(
-              labelText: '开始时间',
+            decoration: InputDecoration(
+              labelText: context.tr('开始时间'),
               hintText: '08:00',
               isDense: true,
             ),
@@ -114,8 +117,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 110,
           child: TextField(
             controller: _endController,
-            decoration: const InputDecoration(
-              labelText: '结束时间',
+            decoration: InputDecoration(
+              labelText: context.tr('结束时间'),
               hintText: '22:00',
               isDense: true,
             ),
@@ -125,8 +128,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           width: 120,
           child: TextField(
             controller: _segmentController,
-            decoration: const InputDecoration(
-              labelText: '时段编号（必填）',
+            decoration: InputDecoration(
+              labelText: context.tr('时段编号（必填）'),
               isDense: true,
             ),
           ),
@@ -143,9 +146,9 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _pageController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '页码',
-              hintText: '从 1 开始',
+            decoration: InputDecoration(
+              labelText: context.tr('页码'),
+              hintText: context.tr('从 1 开始'),
               isDense: true,
             ),
           ),
@@ -155,8 +158,8 @@ extension _LibbookQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _sizeController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '每页数量',
+            decoration: InputDecoration(
+              labelText: context.tr('每页数量'),
               hintText: '1–100',
               isDense: true,
             ),
@@ -181,15 +184,15 @@ extension _LibbookDetailActions on _FeatureDetailListState {
             ? () => widget.onLibbookCancelWrite!(libbookCancelAction)
             : null,
         icon: const Icon(Icons.event_busy),
-        label: const Text('准备取消预约'),
+        label: Text(context.tr('准备取消预约')),
       ),
       if (!canLibbookCancel)
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             libbookCancelAction.eligibility == ActionEligibility.denied
-                ? '该预约当前不可取消。'
-                : '当前取消资格无法确认，请刷新后重试。',
+                ? context.tr('该预约当前不可取消。')
+                : context.tr('当前取消资格无法确认，请刷新后重试。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -209,15 +212,15 @@ extension _LibbookDetailActions on _FeatureDetailListState {
             ? () => widget.onLibbookReserveWrite!(libbookReserveAction)
             : null,
         icon: const Icon(Icons.event_available),
-        label: const Text('准备预约此座位'),
+        label: Text(context.tr('准备预约此座位')),
       ),
       if (!canLibbookReserve)
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             libbookReserveAction.eligibility == ActionEligibility.denied
-                ? '该座位当前不可预约。'
-                : '当前预约资格无法确认，请刷新后重试。',
+                ? context.tr('该座位当前不可预约。')
+                : context.tr('当前预约资格无法确认，请刷新后重试。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

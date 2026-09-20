@@ -158,7 +158,7 @@ class _CgyyViewState extends State<_CgyyView> {
           TextButton.icon(
             onPressed: () => _load(_query),
             icon: const Icon(Icons.refresh),
-            label: const Text('加载失败，点击重试'),
+            label: Text(context.tr('加载失败，点击重试')),
           ),
         Expanded(
           child: switch (widget.page) {
@@ -187,14 +187,15 @@ class _CgyyViewState extends State<_CgyyView> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
                                 child: SelectableText(
-                                  '${field.label}：${field.value}',
+                                  '${context.tr(field.label)}：${field.value}',
                                 ),
                               ),
                           ],
                         ),
                       ),
                     ),
-                  if (_lock.isEmpty) const Center(child: Text('暂无可用门锁密码')),
+                  if (_lock.isEmpty)
+                    Center(child: Text(context.tr('暂无可用门锁密码'))),
                 ],
               ),
             ),
@@ -230,7 +231,7 @@ class _CgyyViewState extends State<_CgyyView> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilterChip(
-                    label: Text(campus),
+                    label: Text(context.tr(campus)),
                     selected: _campus == campus,
                     onSelected: (_) {
                       setState(() => _campus = campus);
@@ -281,8 +282,8 @@ class _CgyyViewState extends State<_CgyyView> {
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: '搜索研讨室',
+                  decoration: InputDecoration(
+                    hintText: context.tr('搜索研讨室'),
                     prefixIcon: Icon(Icons.search),
                     isDense: true,
                   ),
@@ -308,9 +309,9 @@ class _CgyyViewState extends State<_CgyyView> {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(8),
-          child: Text('选择同一研讨室的一个或两个相邻时段'),
+          child: Text(context.tr('选择同一研讨室的一个或两个相邻时段')),
         ),
         Expanded(child: _reservationTable(grouped)),
         Padding(
@@ -323,8 +324,8 @@ class _CgyyViewState extends State<_CgyyView> {
                   : _form,
               child: Text(
                 _selected.isEmpty
-                    ? '请选择可预约时段'
-                    : '下一步（已选 ${_selected.length} 个时段）',
+                    ? context.tr('请选择可预约时段')
+                    : context.tr("下一步（已选 {0} 个时段）", [_selected.length]),
               ),
             ),
           ),
@@ -334,7 +335,7 @@ class _CgyyViewState extends State<_CgyyView> {
   }
 
   Widget _reservationTable(Map<String, List<FeatureDetail>> grouped) {
-    if (grouped.isEmpty) return const Center(child: Text('暂无符合条件的研讨室时段'));
+    if (grouped.isEmpty) return Center(child: Text(context.tr('暂无符合条件的研讨室时段')));
     final times = <String, String>{};
     String key(FeatureDetail slot) =>
         _academicField(slot, '时段 ID') ??
@@ -365,7 +366,7 @@ class _CgyyViewState extends State<_CgyyView> {
           children: [
             Row(
               children: [
-                cell(const Text('研讨室')),
+                cell(Text(context.tr('研讨室'))),
                 for (final time in times.values)
                   cell(Text(time, textAlign: TextAlign.center)),
               ],
@@ -405,7 +406,10 @@ class _CgyyViewState extends State<_CgyyView> {
           (a) => a.spaceId == action.spaceId && a.timeId == action.timeId,
         );
     return Semantics(
-      label: '${detail.title} ${allowed ? '可预约' : '不可预约'}',
+      label: context.tr("{0} {1}", [
+        detail.title,
+        context.tr(allowed ? '可预约' : '不可预约'),
+      ]),
       selected: selected,
       child: Material(
         color: selected
@@ -439,7 +443,7 @@ class _CgyyViewState extends State<_CgyyView> {
           child: SizedBox.expand(
             child: Center(
               child: Text(
-                selected ? '已选' : '',
+                selected ? context.tr('已选') : '',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimary,
                 ),
@@ -468,14 +472,19 @@ class _CgyyViewState extends State<_CgyyView> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
-          title: const Text('填写研讨室预约信息'),
+          title: Text(context.tr('填写研讨室预约信息')),
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${_libbookDate(_date)} · 已选 ${selected.length} 个时段'),
+                  Text(
+                    context.tr("{0} · 已选 {1} 个时段", [
+                      _libbookDate(_date),
+                      selected.length,
+                    ]),
+                  ),
                   for (final entry in fields.entries)
                     TextField(
                       controller: entry.value,
@@ -484,11 +493,13 @@ class _CgyyViewState extends State<_CgyyView> {
                           : entry.key == '联系电话'
                           ? TextInputType.phone
                           : TextInputType.text,
-                      decoration: InputDecoration(labelText: entry.key),
+                      decoration: InputDecoration(
+                        labelText: context.tr(entry.key),
+                      ),
                     ),
                   DropdownButtonFormField<int>(
                     initialValue: purpose,
-                    decoration: const InputDecoration(labelText: '活动类型'),
+                    decoration: InputDecoration(labelText: context.tr('活动类型')),
                     items: [
                       for (final item in _purposes)
                         if (int.tryParse(_academicField(item, '用途编号') ?? '')
@@ -499,21 +510,21 @@ class _CgyyViewState extends State<_CgyyView> {
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('哲学社会科学类活动'),
+                    title: Text(context.tr('哲学社会科学类活动')),
                     value: philosophy,
                     onChanged: (value) =>
                         update(() => philosophy = value ?? false),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('含校外参与人'),
+                    title: Text(context.tr('含校外参与人')),
                     value: outside,
                     onChanged: (value) =>
                         update(() => outside = value ?? false),
                   ),
                   if (error != null)
                     Text(
-                      error!,
+                      context.tr(error!),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -525,7 +536,7 @@ class _CgyyViewState extends State<_CgyyView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('取消'),
+              child: Text(context.tr('取消')),
             ),
             FilledButton(
               onPressed: () {
@@ -552,7 +563,7 @@ class _CgyyViewState extends State<_CgyyView> {
                   ),
                 );
               },
-              child: const Text('准备预约'),
+              child: Text(context.tr('准备预约')),
             ),
           ],
         ),
@@ -573,7 +584,10 @@ class _CgyyViewState extends State<_CgyyView> {
       padding: const EdgeInsets.all(12),
       children: [
         if (_orders.isEmpty)
-          const Padding(padding: EdgeInsets.all(24), child: Text('暂无预约记录')),
+          Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(context.tr('暂无预约记录')),
+          ),
         for (final order in _orders)
           Card(
             child: ListTile(
@@ -608,7 +622,7 @@ class _CgyyViewState extends State<_CgyyView> {
                 page: _query.page + 1,
               ),
             ),
-            child: const Text('下一页'),
+            child: Text(context.tr('下一页')),
           ),
       ],
     ),
@@ -616,7 +630,7 @@ class _CgyyViewState extends State<_CgyyView> {
 
   Widget _orderDetail() {
     final order = _order;
-    if (order == null) return const Center(child: Text('暂无预约详情'));
+    if (order == null) return Center(child: Text(context.tr('暂无预约详情')));
     final cancel = order.action<CgyyCancelAction>();
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -626,12 +640,12 @@ class _CgyyViewState extends State<_CgyyView> {
         for (final field in order.fields)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text('${field.label}：${field.value}'),
+            child: Text('${context.tr(field.label)}：${field.value}'),
           ),
         if (cancel?.hasCanonicalTarget == true && widget.onCancel != null)
           OutlinedButton(
             onPressed: () => widget.onCancel!(cancel!),
-            child: const Text('取消预约'),
+            child: Text(context.tr('取消预约')),
           ),
       ],
     );

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:ubaa_domain/ubaa_domain.dart';
 import 'write_callbacks.dart';
 import 'appearance.dart';
+import 'localization.dart';
 
 part 'app/home.dart';
 part 'app/ygdk_reminder.dart';
@@ -24,6 +25,7 @@ part 'features/classroom.dart';
 part 'features/timetable.dart';
 part 'features/assignments.dart';
 part 'features/bykc.dart';
+part 'features/bykc_cards.dart';
 part 'features/boya_calendar.dart';
 part 'features/cgyy.dart';
 part 'features/cgyy_view.dart';

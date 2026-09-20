@@ -15,7 +15,7 @@ void _registerCallbackTests() {
     expect(backend.loadedFeatures, isEmpty);
     expect(backend.lastLogin, isNull);
     expect(find.text('本地化课表'), findsNothing);
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byType(UbaaLoginView), findsOneWidget);
   });

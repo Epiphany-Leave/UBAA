@@ -132,7 +132,7 @@ class _TimetableViewState extends State<TimetableView> {
         if (mounted)
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('学期选择保存失败，请重试')));
+          ).showSnackBar(SnackBar(content: Text(context.tr('学期选择保存失败，请重试'))));
       }),
     );
   }
@@ -153,7 +153,7 @@ class _TimetableViewState extends State<TimetableView> {
     if (semester == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('当前日期不在已保存学期内')));
+      ).showSnackBar(SnackBar(content: Text(context.tr('当前日期不在已保存学期内'))));
       return;
     }
     if (_term != semester.term) {
@@ -183,7 +183,12 @@ class _TimetableViewState extends State<TimetableView> {
                 child: Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: Text(
-                    weeks.elementAtOrNull(_index)?.name ?? '本地课表',
+                    weeks.elementAtOrNull(_index) == null
+                        ? context.tr('本地课表')
+                        : context.weekLabel(
+                            weeks[_index].number,
+                            weeks[_index].name,
+                          ),
                     style: Theme.of(context).textTheme.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -192,7 +197,7 @@ class _TimetableViewState extends State<TimetableView> {
               ),
               if (widget.snapshot.error case final error?)
                 IconButton(
-                  tooltip: '加载提示',
+                  tooltip: context.tr('加载提示'),
                   icon: Icon(
                     Icons.error_outline,
                     color: Theme.of(context).colorScheme.error,
@@ -200,39 +205,44 @@ class _TimetableViewState extends State<TimetableView> {
                   onPressed: () => showDialog<void>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('加载提示'),
-                      content: Text('${error.message}\n已保存课表仍可离线查看。'),
+                      title: Text(context.tr('加载提示')),
+                      content: Text(
+                        context.tr("{0}\n已保存课表仍可离线查看。", [error.message]),
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('知道了'),
+                          child: Text(context.tr('知道了')),
                         ),
                       ],
                     ),
                   ),
                 ),
               IconButton(
-                tooltip: '回到本周',
+                tooltip: context.tr('回到本周'),
                 onPressed: _today,
                 icon: const Icon(Icons.today_outlined),
               ),
               PopupMenuButton<String>(
-                tooltip: '课表选项',
+                tooltip: context.tr('课表选项'),
                 icon: const Icon(Icons.tune),
                 itemBuilder: (_) => [
                   if (data != null && data.terms.isNotEmpty)
-                    const PopupMenuItem(value: 'term', child: Text('选择学期')),
+                    PopupMenuItem(
+                      value: 'term',
+                      child: Text(context.tr('选择学期')),
+                    ),
                   if (!widget.offline)
                     PopupMenuItem(
                       value: 'update',
                       enabled: !loading,
-                      child: const Text('本地化课表'),
+                      child: Text(context.tr('本地化课表')),
                     ),
-                  const PopupMenuItem(value: 'info', child: Text('课表信息')),
+                  PopupMenuItem(value: 'info', child: Text(context.tr('课表信息'))),
                   if (AppearanceScope.of(context) != null)
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'settings',
-                      child: Text('课表显示设置'),
+                      child: Text(context.tr('课表显示设置')),
                     ),
                 ],
                 onSelected: (action) async {
@@ -254,7 +264,7 @@ class _TimetableViewState extends State<TimetableView> {
                     final term = await showDialog<String>(
                       context: context,
                       builder: (context) => SimpleDialog(
-                        title: const Text('选择学期'),
+                        title: Text(context.tr('选择学期')),
                         children: [
                           for (final entry in data!.terms.entries)
                             SimpleDialogOption(
@@ -282,14 +292,20 @@ class _TimetableViewState extends State<TimetableView> {
                     showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('课表信息'),
+                        title: Text(context.tr('课表信息')),
                         content: Text(
-                          '${data?.terms[_term] ?? '尚未选择学期'}\n本地课表 · 更新于 ${_semester?.updatedAt ?? '尚未导入'}\n首次自动导入后从本地读取。左右滑动切换周次；点击“本地化课表”可联网更新并保存整学期课表。',
+                          context.tr(
+                            "{0}\n本地课表 · 更新于 {1}\n首次自动导入后从本地读取。左右滑动切换周次；点击“本地化课表”可联网更新并保存整学期课表。",
+                            [
+                              data?.terms[_term] ?? '尚未选择学期',
+                              _semester?.updatedAt ?? '尚未导入',
+                            ],
+                          ),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('知道了'),
+                            child: Text(context.tr('知道了')),
                           ),
                         ],
                       ),
@@ -313,7 +329,9 @@ class _TimetableViewState extends State<TimetableView> {
           child: weeks.isEmpty
               ? Center(
                   child: Text(
-                    widget.offline ? '暂无已保存课表，请登录后本地化课表' : '暂无已保存课表，请点击本地化课表',
+                    widget.offline
+                        ? context.tr('暂无已保存课表，请登录后本地化课表')
+                        : context.tr('暂无已保存课表，请点击本地化课表'),
                   ),
                 )
               : PageView.builder(
@@ -374,7 +392,7 @@ class _WeekStrip extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      week.name,
+                      context.weekLabel(week.number, week.name),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge,
@@ -444,7 +462,7 @@ class _TimetableGrid extends StatelessWidget {
                   for (final field in course.detail.fields)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text('${field.label}：${field.value}'),
+                      child: Text('${context.tr(field.label)}：${field.value}'),
                     ),
                 ],
               ),
@@ -478,7 +496,12 @@ class _TimetableGrid extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      '周${'一二三四五六日'[day - 1]}\n${week.start == null ? '' : '${week.start!.add(Duration(days: day - 1)).month}/${week.start!.add(Duration(days: day - 1)).day}'}',
+                      context.tr("周{0}\n{1}", [
+                        context.weekday(day),
+                        week.start == null
+                            ? ''
+                            : '${week.start!.add(Duration(days: day - 1)).month}/${week.start!.add(Duration(days: day - 1)).day}',
+                      ]),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
@@ -571,11 +594,14 @@ class _TimetableGrid extends StatelessWidget {
           for (final course in unknown)
             ListTile(
               title: Text(course.detail.title),
-              subtitle: const Text('时间或节次未完整提供'),
+              subtitle: Text(context.tr('时间或节次未完整提供')),
               onTap: () => _details(context, course),
             ),
           if (week.courses.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('本周暂无课程')),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(context.tr('本周暂无课程')),
+            ),
         ],
       ),
     );

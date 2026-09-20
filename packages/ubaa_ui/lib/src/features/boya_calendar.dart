@@ -88,7 +88,7 @@ class _BoyaCalendarCardState extends State<BoyaCalendarCard>
           _events = events;
           _message = events.isEmpty
               ? '可读取的手机日历中未发现重叠日程。'
-              : '发现 ${events.length} 项重叠日程，请自行决定是否选课。';
+              : context.tr('发现 {0} 项重叠日程，请自行决定是否选课。', [events.length]);
         });
       } else {
         final message = await widget.actions.edit(draft);
@@ -116,39 +116,46 @@ class _BoyaCalendarCardState extends State<BoyaCalendarCard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('手机日历', style: Theme.of(context).textTheme.titleMedium),
-            const Text('检测时读取手机日历（包含个人安排），仅在设备上处理。保存由系统日历确认，可能同步到你选择的日历账户。'),
-            if (widget.preview) const Text('选课提醒：请在日历编辑页确认提前 5 分钟提醒并保存。'),
+            Text(
+              context.tr('手机日历'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            Text(
+              context.tr('检测时读取手机日历（包含个人安排），仅在设备上处理。保存由系统日历确认，可能同步到你选择的日历账户。'),
+            ),
+            if (widget.preview) Text(context.tr('选课提醒：请在日历编辑页确认提前 5 分钟提醒并保存。')),
             Wrap(
               spacing: 8,
               children: [
                 TextButton.icon(
                   onPressed: _busy ? null : () => _run(check: true),
                   icon: const Icon(Icons.event_available),
-                  label: const Text('检测日程冲突'),
+                  label: Text(context.tr('检测日程冲突')),
                 ),
                 if (widget.selected)
                   TextButton.icon(
                     onPressed: _busy ? null : () => _run(),
                     icon: const Icon(Icons.event_note),
-                    label: const Text('添加课程日程'),
+                    label: Text(context.tr('添加课程日程')),
                   ),
                 if (widget.preview && !widget.selected)
                   TextButton.icon(
                     onPressed: _busy ? null : () => _run(reminder: true),
                     icon: const Icon(Icons.notifications_outlined),
-                    label: const Text('添加选课提醒'),
+                    label: Text(context.tr('添加选课提醒')),
                   ),
               ],
             ),
             if (_busy) const LinearProgressIndicator(),
-            if (_message case final message?) Text(message),
+            if (_message case final message?) Text(context.tr(message)),
             for (final event in _events ?? const <CalendarEvent>[])
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('${event.title}${event.free ? '（标记为空闲）' : ''}'),
+                title: Text(
+                  '${event.title}${event.free ? context.tr('（标记为空闲）') : ''}',
+                ),
                 subtitle: Text(
-                  '${_time(event.startMs)} 至 ${_time(event.endMs)}${event.allDay ? ' · 全天' : ''}\n'
+                  '${context.tr("{0} 至 {1}", [_time(event.startMs), _time(event.endMs)])}${event.allDay ? ' · ${context.tr('全天')}' : ''}\n'
                   '${event.calendar}${event.location.isEmpty ? '' : ' · ${event.location}'}',
                 ),
               ),

@@ -47,7 +47,7 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('填写阳光打卡信息'),
+    title: Text(context.tr('填写阳光打卡信息')),
     content: SizedBox(
       width: 420,
       child: SingleChildScrollView(
@@ -57,28 +57,30 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '项目：${widget.title}'
-                '（分类 ${widget.action.classifyId} / '
-                '项目 ${widget.action.itemId}）',
+                context.tr('项目：{0}（分类 {1} / 项目 {2}）', [
+                  widget.title,
+                  widget.action.classifyId,
+                  widget.action.itemId,
+                ]),
               ),
             ),
             TextField(
               controller: _startController,
-              decoration: const InputDecoration(
-                labelText: '开始时间',
+              decoration: InputDecoration(
+                labelText: context.tr('开始时间'),
                 hintText: 'YYYY-MM-DD HH:mm',
               ),
             ),
             TextField(
               controller: _endController,
-              decoration: const InputDecoration(
-                labelText: '结束时间',
+              decoration: InputDecoration(
+                labelText: context.tr('结束时间'),
                 hintText: 'YYYY-MM-DD HH:mm',
               ),
             ),
             TextField(
               controller: _placeController,
-              decoration: const InputDecoration(labelText: '打卡地点'),
+              decoration: InputDecoration(labelText: context.tr('打卡地点')),
             ),
             const SizedBox(height: 8),
             Align(
@@ -89,7 +91,9 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
                     : _pickPhoto,
                 icon: const Icon(Icons.photo_library_outlined),
                 label: Text(
-                  _photo == null ? '选择照片' : '已选择照片：${_photo!.fileName}',
+                  _photo == null
+                      ? context.tr('选择照片')
+                      : context.tr("已选择照片：{0}", [_photo!.fileName]),
                 ),
               ),
             ),
@@ -105,18 +109,18 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
                   cacheWidth: _previewCacheWidth,
                   cacheHeight: _previewCacheHeight,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(
+                  errorBuilder: (_, __, ___) => SizedBox(
                     width: 180,
                     height: 72,
-                    child: Center(child: Text('照片预览不可用，请重新选择。')),
+                    child: Center(child: Text(context.tr('照片预览不可用，请重新选择。'))),
                   ),
                 ),
               ),
             ],
             if (widget.onPickPhoto == null)
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
-                child: Text('当前运行环境未提供照片选择器，无法提交打卡。'),
+                child: Text(context.tr('当前运行环境未提供照片选择器，无法提交打卡。')),
               ),
             CheckboxListTile(
               value: _shareToSquare,
@@ -124,13 +128,13 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
                 _shareToSquare = value ?? false;
               }),
               contentPadding: EdgeInsets.zero,
-              title: const Text('分享到打卡广场'),
+              title: Text(context.tr('分享到打卡广场')),
             ),
             if (_error case final message?)
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  message,
+                  context.tr(message),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
@@ -139,8 +143,8 @@ class _YgdkFormDialogState extends State<_YgdkFormDialog> {
       ),
     ),
     actions: <Widget>[
-      TextButton(onPressed: _cancel, child: const Text('取消')),
-      FilledButton(onPressed: _continue, child: const Text('继续确认')),
+      TextButton(onPressed: _cancel, child: Text(context.tr('取消'))),
+      FilledButton(onPressed: _continue, child: Text(context.tr('继续确认'))),
     ],
   );
 

@@ -25,7 +25,7 @@ extension _CgyyWriteForm on _FeatureDetailListState {
         String? error;
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
-            title: const Text('填写研讨室预约信息'),
+            title: Text(context.tr('填写研讨室预约信息')),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -33,16 +33,24 @@ extension _CgyyWriteForm on _FeatureDetailListState {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      '站点 ${target.venueSiteId} · ${target.reservationDate.trim()}',
+                      context.tr("站点 {0} · {1}", [
+                        target.venueSiteId,
+                        target.reservationDate.trim(),
+                      ]),
                     ),
                     const SizedBox(height: 8),
-                    Text('空间 ${target.spaceId} · 时段 ${target.timeId}'),
+                    Text(
+                      context.tr("空间 {0} · 时段 {1}", [
+                        target.spaceId,
+                        target.timeId,
+                      ]),
+                    ),
                     if (actionsByKey.length > 1) ...<Widget>[
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          '选择预约时段（已选 ${selectedKeys.length} 个）',
+                          context.tr("选择预约时段（已选 {0} 个）", [selectedKeys.length]),
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                       ),
@@ -55,7 +63,10 @@ extension _CgyyWriteForm on _FeatureDetailListState {
                               final action = entry.value;
                               return FilterChip(
                                 label: Text(
-                                  '空间 ${action.spaceId} · 时段 ${action.timeId}',
+                                  context.tr("空间 {0} · 时段 {1}", [
+                                    action.spaceId,
+                                    action.timeId,
+                                  ]),
                                 ),
                                 selected: selectedKeys.contains(entry.key),
                                 onSelected: (selected) => setState(() {
@@ -77,36 +88,48 @@ extension _CgyyWriteForm on _FeatureDetailListState {
                     TextField(
                       controller: phone,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(labelText: '联系电话'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('联系电话'),
+                      ),
                     ),
                     TextField(
                       controller: theme,
-                      decoration: const InputDecoration(labelText: '预约主题'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('预约主题'),
+                      ),
                     ),
                     TextField(
                       controller: purpose,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '用途编号'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('用途编号'),
+                      ),
                     ),
                     TextField(
                       controller: joinerNum,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '参与人数'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('参与人数'),
+                      ),
                     ),
                     TextField(
                       controller: content,
-                      decoration: const InputDecoration(labelText: '活动内容'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('活动内容'),
+                      ),
                     ),
                     TextField(
                       controller: joiners,
-                      decoration: const InputDecoration(labelText: '参与人说明'),
+                      decoration: InputDecoration(
+                        labelText: context.tr('参与人说明'),
+                      ),
                     ),
                     CheckboxListTile(
                       value: philosophy,
                       onChanged: (value) => setState(() {
                         philosophy = value ?? false;
                       }),
-                      title: const Text('哲学社会科学类活动'),
+                      title: Text(context.tr('哲学社会科学类活动')),
                       contentPadding: EdgeInsets.zero,
                     ),
                     CheckboxListTile(
@@ -114,14 +137,14 @@ extension _CgyyWriteForm on _FeatureDetailListState {
                       onChanged: (value) => setState(() {
                         offSchool = value ?? false;
                       }),
-                      title: const Text('含校外参与人'),
+                      title: Text(context.tr('含校外参与人')),
                       contentPadding: EdgeInsets.zero,
                     ),
                     if (error case final message?)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          message,
+                          context.tr(message),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
@@ -134,7 +157,7 @@ extension _CgyyWriteForm on _FeatureDetailListState {
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('取消'),
+                child: Text(context.tr('取消')),
               ),
               FilledButton(
                 onPressed: () {
@@ -174,7 +197,7 @@ extension _CgyyWriteForm on _FeatureDetailListState {
                     ),
                   );
                 },
-                child: const Text('继续确认'),
+                child: Text(context.tr('继续确认')),
               ),
             ],
           ),

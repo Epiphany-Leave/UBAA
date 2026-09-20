@@ -10,14 +10,14 @@ extension _EvaluationQueryControls on _FeatureQueryControlsState {
             : (value) => setState(
                 () => _evaluationView = value ?? FeatureQueryView.summary,
               ),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('全部课程'),
+            child: Text(context.tr('全部课程')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.evaluationPending,
-            child: Text('待评课程'),
+            child: Text(context.tr('待评课程')),
           ),
         ],
       ),
@@ -42,7 +42,7 @@ extension _EvaluationDetailActions on _FeatureDetailListState {
           }
         }),
         contentPadding: EdgeInsets.zero,
-        title: const Text('选择此课程进行批量评教'),
+        title: Text(context.tr('选择此课程进行批量评教')),
       ),
     ],
   ];
@@ -55,7 +55,7 @@ extension _EvaluationDetailActions on _FeatureDetailListState {
             onPressed: () =>
                 widget.onEvaluationWrite!(<EvaluationSubmitTarget>[evaluation]),
             icon: const Icon(Icons.rate_review_outlined),
-            label: const Text('准备提交评教'),
+            label: Text(context.tr('准备提交评教')),
           ),
         ],
       ];
@@ -71,7 +71,11 @@ extension _EvaluationDetailActions on _FeatureDetailListState {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Row(
           children: <Widget>[
-            Expanded(child: Text('已选择 ${selectedEvaluations.length} 门待评课程')),
+            Expanded(
+              child: Text(
+                context.tr("已选择 {0} 门待评课程", [selectedEvaluations.length]),
+              ),
+            ),
             OutlinedButton(
               onPressed: pendingEvaluations.isEmpty
                   ? null
@@ -91,8 +95,8 @@ extension _EvaluationDetailActions on _FeatureDetailListState {
                     }),
               child: Text(
                 selectedEvaluations.length == pendingEvaluations.length
-                    ? '取消全选'
-                    : '全选待评',
+                    ? context.tr('取消全选')
+                    : context.tr('全选待评'),
               ),
             ),
             const SizedBox(width: 8),
@@ -101,7 +105,7 @@ extension _EvaluationDetailActions on _FeatureDetailListState {
                   ? null
                   : () => widget.onEvaluationWrite!(selectedEvaluations),
               icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('准备批量评教'),
+              label: Text(context.tr('准备批量评教')),
             ),
           ],
         ),

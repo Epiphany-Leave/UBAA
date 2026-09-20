@@ -24,7 +24,7 @@ class FriendlyErrorCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    error.title,
+                    context.tr(error.title),
                     style: TextStyle(
                       color: colors.onErrorContainer,
                       fontWeight: FontWeight.bold,
@@ -32,24 +32,26 @@ class FriendlyErrorCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    error.message,
+                    context.tr(error.message),
                     style: TextStyle(color: colors.onErrorContainer),
                   ),
                   if (_safeIssueId != null) ...<Widget>[
                     const SizedBox(height: 8),
-                    SelectableText('错误编号：$_safeIssueId'),
-                    SelectableText('错误代码：${error.code.wireName}'),
+                    SelectableText(context.tr("错误编号：{0}", [_safeIssueId])),
+                    SelectableText(
+                      context.tr("错误代码：{0}", [error.code.wireName]),
+                    ),
                     TextButton.icon(
                       onPressed: () => _copyError(context),
                       icon: const Icon(Icons.copy_outlined),
-                      label: const Text('复制错误信息'),
+                      label: Text(context.tr('复制错误信息')),
                     ),
                   ],
                   if (error.retryable && onRetry != null) ...<Widget>[
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: onRetry,
-                      child: Text(error.actionLabel ?? '重试'),
+                      child: Text(context.tr(error.actionLabel ?? '重试')),
                     ),
                   ],
                 ],
@@ -90,7 +92,7 @@ Future<void> _copyDiagnosticText(BuildContext context, String text) async {
   if (context.mounted) {
     ScaffoldMessenger.maybeOf(
       context,
-    )?.showSnackBar(SnackBar(content: Text(message)));
+    )?.showSnackBar(SnackBar(content: Text(context.tr(message))));
   }
 }
 
@@ -107,7 +109,7 @@ Future<void> _showDiagnosticsDialog(
   await showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('本次运行诊断'),
+      title: Text(context.tr('本次运行诊断')),
       content: SizedBox(
         width: 560,
         child: SingleChildScrollView(child: SelectableText(report)),
@@ -115,11 +117,11 @@ Future<void> _showDiagnosticsDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: Text(context.tr('关闭')),
         ),
         TextButton(
           onPressed: () => _copyDiagnosticText(context, report),
-          child: const Text('复制诊断信息'),
+          child: Text(context.tr('复制诊断信息')),
         ),
       ],
     ),

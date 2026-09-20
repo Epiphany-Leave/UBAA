@@ -35,13 +35,16 @@ class WriteConfirmationView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '确认${intent.operation.title}',
+                  context.tr("确认{0}", [context.tr(intent.operation.title)]),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
                 _DetailField(label: '目标', value: intent.targetSummary),
                 const SizedBox(height: 8),
-                _DetailField(label: '实际路线', value: intent.resolvedRoute.label),
+                _DetailField(
+                  label: '实际路线',
+                  value: context.tr(intent.resolvedRoute.label),
+                ),
                 const SizedBox(height: 8),
                 _DetailField(
                   label: '有效期至',
@@ -49,7 +52,10 @@ class WriteConfirmationView extends StatelessWidget {
                 ),
                 if (intent.warnings.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 16),
-                  Text('请注意', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    context.tr('请注意'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   for (final warning in intent.warnings)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -68,7 +74,7 @@ class WriteConfirmationView extends StatelessWidget {
                     OutlinedButton(
                       onPressed: isSubmitting ? null : onCancel,
                       child: isDiscarding
-                          ? const Row(
+                          ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 SizedBox.square(
@@ -78,10 +84,10 @@ class WriteConfirmationView extends StatelessWidget {
                                   ),
                                 ),
                                 SizedBox(width: 8),
-                                Text('正在取消'),
+                                Text(context.tr('正在取消')),
                               ],
                             )
-                          : const Text('取消'),
+                          : Text(context.tr('取消')),
                     ),
                     FilledButton.icon(
                       onPressed: expired || isSubmitting
@@ -93,7 +99,9 @@ class WriteConfirmationView extends StatelessWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.check),
-                      label: Text(expired ? '意图已过期' : '确认提交'),
+                      label: Text(
+                        expired ? context.tr('意图已过期') : context.tr('确认提交'),
+                      ),
                     ),
                   ],
                 ),

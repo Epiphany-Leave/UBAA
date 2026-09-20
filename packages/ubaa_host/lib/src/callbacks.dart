@@ -54,6 +54,10 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
       child: MaterialApp(
         navigatorKey: _navigatorKey,
         title: 'UBAA',
+        locale: _appearance.language.locale,
+        supportedLocales: UbaaLocalizations.supportedLocales,
+        localizationsDelegates: UbaaLocalizations.delegates,
+        localeListResolutionCallback: UbaaLocalizations.resolve,
         debugShowCheckedModeBanner: false,
         theme: UbaaTheme.light().copyWith(
           colorScheme: ColorScheme.fromSeed(
@@ -120,7 +124,7 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('离线课表')),
+          appBar: AppBar(title: Text(context.tr('离线课表'))),
           body: SafeArea(
             child: AnimatedBuilder(
               animation: _controller,

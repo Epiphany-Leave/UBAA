@@ -82,7 +82,7 @@ class _ClassroomViewState extends State<_ClassroomView> {
                 FilterChip(
                   selected: _campus == campus.$1,
                   onSelected: (_) => _load(campus: campus.$1),
-                  label: Text(campus.$2),
+                  label: Text(context.tr(campus.$2)),
                 ),
             ],
           ),
@@ -110,8 +110,8 @@ class _ClassroomViewState extends State<_ClassroomView> {
               Expanded(
                 flex: 2,
                 child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: '搜索教室/楼栋',
+                  decoration: InputDecoration(
+                    hintText: context.tr('搜索教室/楼栋'),
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(),
                     isDense: true,
@@ -140,7 +140,7 @@ class _ClassroomViewState extends State<_ClassroomView> {
               },
             ),
           ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -150,26 +150,31 @@ class _ClassroomViewState extends State<_ClassroomView> {
                 child: SizedBox.square(dimension: 12),
               ),
               SizedBox(width: 6),
-              Text('空闲'),
+              Text(context.tr('空闲')),
             ],
           ),
         ),
         if (widget.snapshot.status == FeatureLoadStatus.loading)
           const LinearProgressIndicator(),
         if (widget.snapshot.status == FeatureLoadStatus.stale)
-          const MaterialBanner(content: Text('刷新失败，仍显示上次查询结果'), actions: []),
+          MaterialBanner(
+            content: Text(context.tr('刷新失败，仍显示上次查询结果')),
+            actions: [],
+          ),
         Expanded(
           child: switch (widget.snapshot.status) {
             FeatureLoadStatus.loading when widget.snapshot.details.isEmpty =>
-              const Center(child: Text('正在查询…')),
+              Center(child: Text(context.tr('正在查询…'))),
             FeatureLoadStatus.failure => Center(
               child: FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text('查询失败，重试'),
+                label: Text(context.tr('查询失败，重试')),
               ),
             ),
-            _ when grouped.isEmpty => const Center(child: Text('未找到匹配教室')),
+            _ when grouped.isEmpty => Center(
+              child: Text(context.tr('未找到匹配教室')),
+            ),
             _ => _ClassroomTable(grouped: grouped),
           },
         ),
@@ -255,7 +260,7 @@ class _ClassroomTableRow extends StatelessWidget {
               decoration: BoxDecoration(border: border),
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Text(
-                header ? '教室' : room!.title,
+                header ? context.tr('教室') : room!.title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -268,8 +273,12 @@ class _ClassroomTableRow extends StatelessWidget {
               flex: 10,
               child: Semantics(
                 label: header
-                    ? '第$section节'
-                    : '${room!.title}第$section节${free.contains(section) ? '空闲' : '占用'}',
+                    ? context.tr("第{0}节", [section])
+                    : context.tr("{0}第{1}节{2}", [
+                        room!.title,
+                        section,
+                        free.contains(section) ? '空闲' : '占用',
+                      ]),
                 child: Container(
                   height: double.infinity,
                   alignment: Alignment.center,

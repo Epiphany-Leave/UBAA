@@ -9,14 +9,14 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
             ? null
             : (value) =>
                   setState(() => _spocView = value ?? FeatureQueryView.summary),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('作业列表'),
+            child: Text(context.tr('作业列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.spocDetail,
-            child: Text('作业详情'),
+            child: Text(context.tr('作业详情')),
           ),
         ],
       ),
@@ -25,9 +25,9 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
           width: 160,
           child: TextField(
             controller: _spocAssignmentController,
-            decoration: const InputDecoration(
-              labelText: '作业编号',
-              hintText: '从作业列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('作业编号'),
+              hintText: context.tr('从作业列表选择'),
               isDense: true,
             ),
           ),
@@ -50,18 +50,18 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
             : (value) => setState(
                 () => _signinView = value ?? FeatureQueryView.summary,
               ),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('全部课程'),
+            child: Text(context.tr('全部课程')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.signinPending,
-            child: Text('未签到'),
+            child: Text(context.tr('未签到')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.signinCompleted,
-            child: Text('已签到'),
+            child: Text(context.tr('已签到')),
           ),
         ],
       ),
@@ -76,18 +76,18 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
             : (value) => setState(
                 () => _judgeView = value ?? FeatureQueryView.summary,
               ),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('作业列表'),
+            child: Text(context.tr('作业列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.judgeDetail,
-            child: Text('作业详情'),
+            child: Text(context.tr('作业详情')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.judgeBatchDetails,
-            child: Text('批量详情'),
+            child: Text(context.tr('批量详情')),
           ),
         ],
       ),
@@ -96,9 +96,9 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
           width: 140,
           child: TextField(
             controller: _judgeCourseController,
-            decoration: const InputDecoration(
-              labelText: '课程编号',
-              hintText: '从作业列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('课程编号'),
+              hintText: context.tr('从作业列表选择'),
               isDense: true,
             ),
           ),
@@ -107,9 +107,9 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
           width: 160,
           child: TextField(
             controller: _judgeAssignmentController,
-            decoration: const InputDecoration(
-              labelText: '作业编号',
-              hintText: '从作业列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('作业编号'),
+              hintText: context.tr('从作业列表选择'),
               isDense: true,
             ),
           ),
@@ -132,17 +132,17 @@ extension _AssignmentsQueryControls on _FeatureQueryControlsState {
             controller: _judgeBatchController,
             minLines: 2,
             maxLines: 5,
-            decoration: const InputDecoration(
-              labelText: '批量作业键',
-              hintText: '每行：课程编号/作业编号',
-              helperText: '仅填写作业列表中的公开编号',
+            decoration: InputDecoration(
+              labelText: context.tr('批量作业键'),
+              hintText: context.tr('每行：课程编号/作业编号'),
+              helperText: context.tr('仅填写作业列表中的公开编号'),
               isDense: true,
             ),
           ),
         ),
       if (_judgeView == FeatureQueryView.summary)
         FilterChip(
-          label: const Text('包含已过期作业'),
+          label: Text(context.tr('包含已过期作业')),
           selected: _includeExpired,
           onSelected: _submitting
               ? null
@@ -165,15 +165,15 @@ extension _AssignmentsDetailActions on _FeatureDetailListState {
       OutlinedButton.icon(
         onPressed: canSignin ? () => widget.onSigninWrite!(signinAction) : null,
         icon: const Icon(Icons.how_to_reg),
-        label: const Text('准备签到'),
+        label: Text(context.tr('准备签到')),
       ),
       if (!canSignin)
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             signinAction.eligibility == ActionEligibility.denied
-                ? '该课程已签到，不能重复提交。'
-                : '当前签到资格无法确认，请刷新后重试。',
+                ? context.tr('该课程已签到，不能重复提交。')
+                : context.tr('当前签到资格无法确认，请刷新后重试。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

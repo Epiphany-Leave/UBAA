@@ -170,14 +170,18 @@ class _LibbookViewState extends State<_LibbookView> {
                 trailing: IconButton(
                   onPressed: loading ? null : _refreshReserve,
                   icon: const Icon(Icons.refresh),
-                  tooltip: '刷新',
+                  tooltip: context.tr('刷新'),
                 ),
                 children: [
                   for (final library in _libraries)
                     FilterChip(
                       selected: _libraryId == _academicField(library, '馆 ID'),
                       label: Text(
-                        '${library.title} ${_academicField(library, '空闲座位') ?? '-'}/${_academicField(library, '总座位') ?? '-'}',
+                        context.tr("{0} {1}/{2}", [
+                          library.title,
+                          _academicField(library, '空闲座位') ?? '-',
+                          _academicField(library, '总座位') ?? '-',
+                        ]),
                       ),
                       onSelected: (_) => _selectLibrary(library),
                     ),
@@ -205,13 +209,17 @@ class _LibbookViewState extends State<_LibbookView> {
                   else if (failed && _view == FeatureQueryView.libbookAreas)
                     _LibbookInlineError(onRetry: _refreshReserve)
                   else if (_areas.isEmpty)
-                    const Text('当前楼层暂无可预约分区')
+                    Text(context.tr('当前楼层暂无可预约分区'))
                   else
                     for (final area in _areas)
                       FilterChip(
                         selected: _areaId == _academicField(area, '分区 ID'),
                         label: Text(
-                          '${area.title} ${_academicField(area, '空闲座位') ?? '-'}/${_academicField(area, '总座位') ?? '-'}',
+                          context.tr("{0} {1}/{2}", [
+                            area.title,
+                            _academicField(area, '空闲座位') ?? '-',
+                            _academicField(area, '总座位') ?? '-',
+                          ]),
                         ),
                         onSelected: (_) => _selectArea(area),
                       ),
@@ -223,11 +231,11 @@ class _LibbookViewState extends State<_LibbookView> {
                   onPressed: _areaMapAsset(_areaId) == null
                       ? null
                       : () => _showAreaMap(context),
-                  child: const Text('查看座位分布'),
+                  child: Text(context.tr('查看座位分布')),
                 ),
                 children: [
                   if (_areaId != null && _areaMapAsset(_areaId) == null)
-                    const Text('当前分区暂无平面图'),
+                    Text(context.tr('当前分区暂无平面图')),
                 ],
               ),
               if (loading &&
@@ -242,11 +250,11 @@ class _LibbookViewState extends State<_LibbookView> {
                 Text(
                   _areaDetails.firstOrNull != null &&
                           _slots(_areaDetails.first).isEmpty
-                      ? '当前分区暂无可预约时段'
-                      : '当前分区暂无座位数据',
+                      ? context.tr('当前分区暂无可预约时段')
+                      : context.tr('当前分区暂无座位数据'),
                 )
               else if (availableSeats.isEmpty)
-                const Text('当前分区暂无可预约座位')
+                Text(context.tr('当前分区暂无可预约座位'))
               else
                 GridView.count(
                   crossAxisCount: 4,
@@ -274,14 +282,18 @@ class _LibbookViewState extends State<_LibbookView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '预约信息',
+                        context.tr('预约信息'),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      Text('日期：${_day ?? '-'}'),
-                      Text('分区：${_areaName ?? '-'}'),
+                      Text(context.tr("日期：{0}", [_day ?? '-'])),
+                      Text(context.tr("分区：{0}", [_areaName ?? '-'])),
                       Text(
-                        '座位：${_selectedSeat == null ? '-' : _seatName(_selectedSeat!)}',
+                        context.tr("座位：{0}", [
+                          _selectedSeat == null
+                              ? '-'
+                              : _seatName(_selectedSeat!),
+                        ]),
                       ),
                     ],
                   ),
@@ -292,7 +304,7 @@ class _LibbookViewState extends State<_LibbookView> {
                 onPressed: _selectedSeat == null || widget.onReserve == null
                     ? null
                     : () => widget.onReserve!(_selectedSeat!),
-                child: const Text('确认预约'),
+                child: Text(context.tr('确认预约')),
               ),
             ],
           ),
@@ -313,7 +325,7 @@ class _LibbookViewState extends State<_LibbookView> {
               children: [
                 Expanded(
                   child: Text(
-                    '预约记录',
+                    context.tr('预约记录'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -327,14 +339,14 @@ class _LibbookViewState extends State<_LibbookView> {
                     ),
                   ),
                   icon: const Icon(Icons.refresh),
-                  tooltip: '刷新',
+                  tooltip: context.tr('刷新'),
                 ),
               ],
             ),
             if (_bookings.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 12),
-                child: Text('当前暂无图书馆座位预约'),
+                child: Text(context.tr('当前暂无图书馆座位预约')),
               )
             else
               for (final booking in _bookings)
@@ -497,7 +509,7 @@ class _LibbookViewState extends State<_LibbookView> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 16),
                       child: Text(
-                        _areaName ?? '座位分布',
+                        _areaName ?? context.tr('座位分布'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
@@ -506,20 +518,20 @@ class _LibbookViewState extends State<_LibbookView> {
                     ),
                   ),
                   IconButton(
-                    tooltip: '缩小',
+                    tooltip: context.tr('缩小'),
                     onPressed: () => zoom(0.5),
                     icon: const Icon(Icons.zoom_out),
                   ),
                   IconButton(
-                    tooltip: '放大',
+                    tooltip: context.tr('放大'),
                     onPressed: () => zoom(2),
                     icon: const Icon(Icons.zoom_in),
                   ),
-                  TextButton(onPressed: reset, child: const Text('重置')),
+                  TextButton(onPressed: reset, child: Text(context.tr('重置'))),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
-                    tooltip: '关闭',
+                    tooltip: context.tr('关闭'),
                   ),
                 ],
               ),
@@ -529,7 +541,7 @@ class _LibbookViewState extends State<_LibbookView> {
                   vertical: 8,
                 ),
                 child: Text(
-                  '静态座位分布图，颜色不代表当前可用状态。请在预约页面选择座位。',
+                  context.tr('静态座位分布图，颜色不代表当前可用状态。请在预约页面选择座位。'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -553,7 +565,7 @@ class _LibbookViewState extends State<_LibbookView> {
                           asset,
                           package: 'ubaa_ui',
                           fit: BoxFit.contain,
-                          semanticLabel: '静态座位分布图',
+                          semanticLabel: context.tr('静态座位分布图'),
                         ),
                       ),
                     );
@@ -643,10 +655,13 @@ class _LibbookHomeCard extends StatelessWidget {
           children: [
             Icon(icon, size: 36, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              context.tr(title),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 4),
             Text(
-              description,
+              context.tr(description),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -676,7 +691,7 @@ class _LibbookSection extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              title,
+              context.tr(title),
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -728,7 +743,7 @@ class _LibbookSeatCard extends StatelessWidget {
               maxLines: 1,
             ),
             Text(
-              selected ? '已选' : '可预约',
+              selected ? context.tr('已选') : context.tr('可预约'),
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ],
@@ -761,7 +776,7 @@ class _LibbookBookingCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    detail.title.isEmpty ? '图书馆座位' : detail.title,
+                    detail.title.isEmpty ? context.tr('图书馆座位') : detail.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -770,7 +785,7 @@ class _LibbookBookingCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  _academicField(detail, '状态') ?? '已预约',
+                  _academicField(detail, '状态') ?? context.tr('已预约'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -787,13 +802,13 @@ class _LibbookBookingCard extends StatelessWidget {
             ),
             if (_academicField(detail, '座位') case final seat?) ...[
               const SizedBox(height: 8),
-              Text('座位：$seat'),
+              Text(context.tr("座位：{0}", [seat])),
             ],
             if (canCancel) ...[
               const SizedBox(height: 8),
               ActionChip(
                 onPressed: () => onCancel!(cancel!),
-                label: const Text('取消预约'),
+                label: Text(context.tr('取消预约')),
               ),
             ],
           ],
@@ -815,7 +830,7 @@ class _LibbookInlineLoading extends StatelessWidget {
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       const SizedBox(width: 8),
-      Text(text),
+      Text(context.tr(text)),
     ],
   );
 }
@@ -828,11 +843,11 @@ class _LibbookInlineError extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Text(
-        '加载失败',
+        context.tr('加载失败'),
         style: TextStyle(color: Theme.of(context).colorScheme.error),
       ),
       const SizedBox(width: 8),
-      ActionChip(onPressed: onRetry, label: const Text('重试')),
+      ActionChip(onPressed: onRetry, label: Text(context.tr('重试'))),
     ],
   );
 }

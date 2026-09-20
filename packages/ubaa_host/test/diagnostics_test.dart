@@ -6,6 +6,13 @@ import 'package:ubaa_domain/ubaa_domain.dart';
 import 'package:ubaa_host/ubaa_host.dart';
 
 void main() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(
+    () => binding.platformDispatcher.localesTestValue = [
+      const Locale('zh', 'CN'),
+    ],
+  );
+  tearDown(binding.platformDispatcher.clearLocalesTestValue);
   testWidgets('个人页可查看本次运行诊断且不会包含账号资料', (tester) async {
     await tester.pumpWidget(UbaaAppHost(backend: _SignedInBackend()));
     await tester.pumpAndSettle();

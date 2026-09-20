@@ -245,22 +245,24 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
       appBar: AppBar(
         title: Text(
           pendingWrite == null
-              ? (_openedSubpage?.title ??
-                    _openedFeature?.title ??
-                    _tabs[_selectedIndex].label)
-              : '确认${pendingWrite.operation.title}',
+              ? context.tr(
+                  _openedSubpage?.title ??
+                      _openedFeature?.title ??
+                      _tabs[_selectedIndex].label,
+                )
+              : context.tr("确认{0}", [context.tr(pendingWrite.operation.title)]),
         ),
         leading: _openedFeature == null || pendingWrite != null
             ? null
             : IconButton(
-                tooltip: '返回',
+                tooltip: context.tr('返回'),
                 onPressed: _navigateBack,
                 icon: const Icon(Icons.arrow_back),
               ),
         actions: <Widget>[
           if (_openedFeature == null && _selectedIndex == 0)
             IconButton(
-              tooltip: '刷新',
+              tooltip: context.tr('刷新'),
               onPressed: () => widget.onRefresh(),
               icon: const Icon(Icons.refresh),
             ),
@@ -287,7 +289,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
                       key: ValueKey<String>('tab-${tab.label}'),
                       icon: Icon(tab.icon),
                       selectedIcon: Icon(tab.selectedIcon),
-                      label: tab.label,
+                      label: context.tr(tab.label),
                     ),
                   )
                   .toList(),
@@ -349,7 +351,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
           (tab) => NavigationRailDestination(
             icon: Icon(tab.icon),
             selectedIcon: Icon(tab.selectedIcon),
-            label: Text(tab.label),
+            label: Text(context.tr(tab.label)),
           ),
         )
         .toList(),
@@ -376,7 +378,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
                       ? _tabs[index].selectedIcon
                       : _tabs[index].icon,
                 ),
-                title: Text(_tabs[index].label),
+                title: Text(context.tr(_tabs[index].label)),
                 onTap: () {
                   Navigator.of(context).pop();
                   _selectTab(index);
@@ -524,7 +526,10 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
           : '${error.message}\n错误代码：${error.code.wireName}'
                 '${error.issueId == null ? '' : '\n错误编号：${error.issueId}'}';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 10)),
+        SnackBar(
+          content: Text(context.tr(message)),
+          duration: const Duration(seconds: 10),
+        ),
       );
     }
   }
@@ -538,7 +543,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('暂时无法取消待确认操作，请重试。')));
+      ).showSnackBar(SnackBar(content: Text(context.tr('暂时无法取消待确认操作，请重试。'))));
     }
   }
 
@@ -547,9 +552,9 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     if (intent == null || widget.writeState.isSubmitting) return;
     if (intent.operation == WriteOperation.ygdkSubmit &&
         !_hasYgdkSubmissionCapabilities) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('阳光打卡能力不完整；尚未提交任何写请求。')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('阳光打卡能力不完整；尚未提交任何写请求。'))),
+      );
       return;
     }
     final confirm = widget.onConfirmWrite;
@@ -570,6 +575,6 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(outcome.message)));
+    ).showSnackBar(SnackBar(content: Text(context.tr(outcome.message))));
   }
 }

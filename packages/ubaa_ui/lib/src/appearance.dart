@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'localization.dart';
 
 /// Local presentation preferences; no protocol or account data.
 class AppearanceSettings extends ChangeNotifier {
   AppearanceSettings({this.persist});
   final Future<void> Function(Map<String, Object?>)? persist;
   ThemeMode mode = ThemeMode.system;
+  AppLanguage language = AppLanguage.system;
   int color = 0;
   double fontScale = 1;
   double rowHeight = 76;
@@ -20,6 +22,7 @@ class AppearanceSettings extends ChangeNotifier {
   ];
   Map<String, Object?> toMap() => {
     'mode': mode.index,
+    'language': language.code,
     'color': color,
     'fontScale': fontScale,
     'rowHeight': rowHeight,
@@ -29,6 +32,7 @@ class AppearanceSettings extends ChangeNotifier {
     'term': term,
   };
   void restore(Map<Object?, Object?> map) {
+    language = AppLanguage.fromCode(map['language']);
     mode = ThemeMode.values[(map['mode'] as num? ?? 0).toInt().clamp(0, 2)];
     color = (map['color'] as num? ?? 0).toInt().clamp(0, colors.length - 1);
     fontScale = (map['fontScale'] as num? ?? 1).toDouble().clamp(.85, 1.3);
@@ -68,9 +72,9 @@ class AppearanceSettingsPage extends StatelessWidget {
         await settings.save();
       } catch (_) {
         if (context.mounted)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('设置保存失败，本次生效；请重试')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.tr('设置保存失败，本次生效；请重试'))),
+          );
       }
     }
 
@@ -88,20 +92,26 @@ class AppearanceSettingsPage extends StatelessWidget {
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('界面与课表设置')),
+      appBar: AppBar(title: Text(context.tr('界面与课表设置'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          section('界面', [
+          section(context.tr('界面'), [
             ListTile(
-              title: const Text('显示模式'),
+              title: Text(context.tr('显示模式')),
               trailing: DropdownButton<ThemeMode>(
                 value: settings.mode,
                 items: [
                   for (final mode in ThemeMode.values)
                     DropdownMenuItem(
                       value: mode,
-                      child: Text(['跟随系统', '浅色', '深色'][mode.index]),
+                      child: Text(
+                        [
+                          context.tr('跟随系统'),
+                          context.tr('浅色'),
+                          context.tr('深色'),
+                        ][mode.index],
+                      ),
                     ),
                 ],
                 onChanged: (value) {
@@ -113,14 +123,21 @@ class AppearanceSettingsPage extends StatelessWidget {
               ),
             ),
             ListTile(
-              title: const Text('主题色'),
+              title: Text(context.tr('主题色')),
               trailing: DropdownButton<int>(
                 value: settings.color,
                 items: [
                   for (var i = 0; i < 4; i++)
                     DropdownMenuItem(
                       value: i,
-                      child: Text(['雾蓝', '丁香', '青绿', '玫瑰'][i]),
+                      child: Text(
+                        [
+                          context.tr('雾蓝'),
+                          context.tr('丁香'),
+                          context.tr('青绿'),
+                          context.tr('玫瑰'),
+                        ][i],
+                      ),
                     ),
                 ],
                 onChanged: (value) {
@@ -132,9 +149,11 @@ class AppearanceSettingsPage extends StatelessWidget {
               ),
             ),
             ListTile(
-              title: const Text('字号'),
+              title: Text(context.tr('字号')),
               subtitle: Text(
-                '${(settings.fontScale * 100).round()}% · 在系统字号基础上调整',
+                context.tr("{0}% · 在系统字号基础上调整", [
+                  (settings.fontScale * 100).round(),
+                ]),
               ),
             ),
             Slider(
@@ -150,9 +169,9 @@ class AppearanceSettingsPage extends StatelessWidget {
               onChangeEnd: (_) => save(),
             ),
           ]),
-          section('课表', [
+          section(context.tr('课表'), [
             SwitchListTile(
-              title: const Text('显示周末'),
+              title: Text(context.tr('显示周末')),
               value: settings.weekends,
               onChanged: (value) {
                 settings.weekends = value;
@@ -160,7 +179,7 @@ class AppearanceSettingsPage extends StatelessWidget {
               },
             ),
             SwitchListTile(
-              title: const Text('显示完整时间轴'),
+              title: Text(context.tr('显示完整时间轴')),
               value: settings.timeline,
               onChanged: (value) {
                 settings.timeline = value;
@@ -168,7 +187,7 @@ class AppearanceSettingsPage extends StatelessWidget {
               },
             ),
             SwitchListTile(
-              title: const Text('显示周次缩略图'),
+              title: Text(context.tr('显示周次缩略图')),
               value: settings.weekStrip,
               onChanged: (value) {
                 settings.weekStrip = value;
@@ -176,7 +195,7 @@ class AppearanceSettingsPage extends StatelessWidget {
               },
             ),
             ListTile(
-              title: const Text('每节课高度'),
+              title: Text(context.tr('每节课高度')),
               subtitle: Text('${settings.rowHeight.round()}'),
             ),
             Slider(
@@ -190,17 +209,19 @@ class AppearanceSettingsPage extends StatelessWidget {
               },
               onChangeEnd: (_) => save(),
             ),
-            const ListTile(
+            ListTile(
               leading: Icon(Icons.offline_pin_outlined),
-              title: Text('本地课表'),
-              subtitle: Text('切换学期在课表右上角菜单中；仅手动本地化时联网更新。'),
+              title: Text(context.tr('本地课表')),
+              subtitle: Text(context.tr('切换学期在课表右上角菜单中；仅手动本地化时联网更新。')),
             ),
           ]),
-          section('桌面小组件', [
-            const ListTile(
-              title: Text('四种课程视图'),
+          section(context.tr('桌面小组件'), [
+            ListTile(
+              title: Text(context.tr('四种课程视图')),
               subtitle: Text(
-                '今日课程、近日课程跟随 App 选择的学期。一周课程和日视图可点右上角 ≡ 单独选择学期、背景和字号。',
+                context.tr(
+                  '今日课程、近日课程跟随 App 选择的学期。一周课程和日视图可点右上角 ≡ 单独选择学期、背景和字号。',
+                ),
               ),
             ),
           ]),

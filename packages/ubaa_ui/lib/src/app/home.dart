@@ -65,7 +65,7 @@ class _HomeView extends StatelessWidget {
           if (schedule.status == FeatureLoadStatus.loading)
             const LinearProgressIndicator(),
           if (schedule.status == FeatureLoadStatus.stale)
-            const Text('刷新失败，仍显示已保存课表'),
+            Text(context.tr('刷新失败，仍显示已保存课表')),
           if (schedule.details.isNotEmpty)
             for (final course in schedule.details.take(3))
               _HomeEventRow(
@@ -79,14 +79,19 @@ class _HomeView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Text(switch (schedule.status) {
-                FeatureLoadStatus.loading => '正在读取课表…',
-                FeatureLoadStatus.failure => '课表暂未加载，请进入课表查询重试',
-                FeatureLoadStatus.idle => '打开课表，导入本学期课程',
-                _ => hasSemester ? '今天没有课程' : '还没有保存课表，点击导入',
+                FeatureLoadStatus.loading => context.tr('正在读取课表…'),
+                FeatureLoadStatus.failure => context.tr('课表暂未加载，请进入课表查询重试'),
+                FeatureLoadStatus.idle => context.tr('打开课表，导入本学期课程'),
+                _ =>
+                  hasSemester
+                      ? context.tr('今天没有课程')
+                      : context.tr('还没有保存课表，点击导入'),
               }),
             ),
           if (schedule.details.length > 3)
-            Text('另有 ${schedule.details.length - 3} 门课程，进入课表查看'),
+            Text(
+              context.tr("另有 {0} 门课程，进入课表查看", [schedule.details.length - 3]),
+            ),
         ],
       ),
       _HomeSummaryCard(
@@ -98,7 +103,7 @@ class _HomeView extends StatelessWidget {
           if (exam.status == FeatureLoadStatus.loading)
             const LinearProgressIndicator(),
           if (exam.status == FeatureLoadStatus.stale)
-            const Text('刷新失败，仍显示上次考试信息'),
+            Text(context.tr('刷新失败，仍显示上次考试信息')),
           for (final detail in upcoming.take(2))
             _HomeEventRow(
               detail: detail,
@@ -111,14 +116,19 @@ class _HomeView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(switch (exam.status) {
-                FeatureLoadStatus.loading => '正在查询考试安排…',
-                FeatureLoadStatus.failure => '考试查询失败，点击查看详情并重试',
-                FeatureLoadStatus.idle => '点击查看考试安排',
-                _ => undated > 0 ? '考试时间待定，请查看详情' : '当前已加载记录中没有近期考试',
+                FeatureLoadStatus.loading => context.tr('正在查询考试安排…'),
+                FeatureLoadStatus.failure => context.tr('考试查询失败，点击查看详情并重试'),
+                FeatureLoadStatus.idle => context.tr('点击查看考试安排'),
+                _ =>
+                  undated > 0
+                      ? context.tr('考试时间待定，请查看详情')
+                      : context.tr('当前已加载记录中没有近期考试'),
               }),
             ),
-          if (upcoming.isNotEmpty && undated > 0) Text('另有 $undated 项时间待定'),
-          if (upcoming.length > 2) Text('另有 ${upcoming.length - 2} 场考试，点击查看'),
+          if (upcoming.isNotEmpty && undated > 0)
+            Text(context.tr("另有 {0} 项时间待定", [undated])),
+          if (upcoming.length > 2)
+            Text(context.tr("另有 {0} 场考试，点击查看", [upcoming.length - 2])),
         ],
       ),
     ];
@@ -135,12 +145,18 @@ class _HomeView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '你好，${user?.preferredName ?? '同学'}',
+                  context.tr("你好，{0}", [
+                    user?.preferredName ?? context.tr('同学'),
+                  ]),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${now.month}月${now.day}日 · 星期${'一二三四五六日'[now.weekday - 1]}',
+                  context.tr("{0}月{1}日 · 星期{2}", [
+                    now.month,
+                    now.day,
+                    context.weekday(now.weekday),
+                  ]),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -165,10 +181,12 @@ class _HomeView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '最近刷新发现 $gradeChangeCount 门课程成绩更新',
+                            context.tr("最近刷新发现 {0} 门课程成绩更新", [
+                              gradeChangeCount,
+                            ]),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          const Text('本次登录期间的变化，前往成绩查询查看。'),
+                          Text(context.tr('本次登录期间的变化，前往成绩查询查看。')),
                           Wrap(
                             spacing: 8,
                             children: [
@@ -177,11 +195,11 @@ class _HomeView extends StatelessWidget {
                                   onDismissGradeChanges?.call();
                                   onFeatureTap(FeatureId.grades);
                                 },
-                                child: const Text('查看成绩'),
+                                child: Text(context.tr('查看成绩')),
                               ),
                               TextButton(
                                 onPressed: onDismissGradeChanges,
-                                child: const Text('忽略'),
+                                child: Text(context.tr('忽略')),
                               ),
                             ],
                           ),
@@ -217,13 +235,13 @@ class _HomeView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '常用功能',
+                        context.tr('常用功能'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
                     TextButton(
                       onPressed: onAllFeatures,
-                      child: const Text('全部功能'),
+                      child: Text(context.tr('全部功能')),
                     ),
                   ],
                 ),
@@ -260,7 +278,7 @@ class _HomeView extends StatelessWidget {
                                 Icon(_featureIcon(feature)),
                                 const SizedBox(height: 10),
                                 Text(
-                                  feature.title,
+                                  context.tr(feature.title),
                                   textAlign: TextAlign.center,
                                 ),
                               ],
@@ -354,7 +372,7 @@ class _HomeSummaryCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    title,
+                    context.tr(title),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -366,7 +384,7 @@ class _HomeSummaryCard extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: onTap,
-                label: Text(action),
+                label: Text(context.tr(action)),
                 icon: const Icon(Icons.arrow_forward, size: 16),
               ),
             ),
@@ -458,7 +476,10 @@ class _FeatureCard extends StatelessWidget {
     return Semantics(
       container: true,
       button: true,
-      label: '$featureLabel：${_statusText(snapshot)}。点击查看详情',
+      label: context.tr("{0}：{1}。点击查看详情", [
+        context.tr(featureLabel),
+        context.tr(_statusText(snapshot)),
+      ]),
       child: Card(
         clipBehavior: Clip.antiAlias,
         color: colorScheme.surfaceContainerHighest,
@@ -484,7 +505,7 @@ class _FeatureCard extends StatelessWidget {
                       )
                     else if (isFailure || isStale)
                       IconButton(
-                        tooltip: '重试',
+                        tooltip: context.tr('重试'),
                         onPressed: () => onRetry(),
                         icon: Icon(Icons.refresh, color: colorScheme.error),
                       )
@@ -494,7 +515,7 @@ class _FeatureCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  feature.title,
+                  context.tr(feature.title),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -502,7 +523,7 @@ class _FeatureCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Expanded(
                   child: Text(
-                    _statusText(snapshot),
+                    context.tr(_statusText(snapshot)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -515,7 +536,7 @@ class _FeatureCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  feature.description,
+                  context.tr(feature.description),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(

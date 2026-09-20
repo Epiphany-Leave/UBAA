@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>zh-Hans</string>
+        <string>zh-Hant</string>
+        <string>en</string>
+    </array>
 	<key>NSCalendarsUsageDescription</key>
 	<string>仅在你点击检测时读取手机日历，显示与博雅课程重叠的个人日程；不上传日历内容。</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>

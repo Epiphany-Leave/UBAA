@@ -107,7 +107,7 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       Text(
-                        'UBAA 登录',
+                        context.tr('UBAA 登录'),
                         style: Theme.of(context).textTheme.headlineMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -117,7 +117,9 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                         enabled: !widget.isLoading,
                         autofillHints: const <String>[AutofillHints.username],
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(labelText: '学号'),
+                        decoration: InputDecoration(
+                          labelText: context.tr('学号'),
+                        ),
                         onChanged: widget.onUsernameChanged,
                       ),
                       const SizedBox(height: 16),
@@ -128,9 +130,11 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                         autofillHints: const <String>[AutofillHints.password],
                         textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
-                          labelText: '密码',
+                          labelText: context.tr('密码'),
                           suffixIcon: IconButton(
-                            tooltip: _obscurePassword ? '显示密码' : '隐藏密码',
+                            tooltip: _obscurePassword
+                                ? context.tr('显示密码')
+                                : context.tr('隐藏密码'),
                             onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword,
                             ),
@@ -150,7 +154,9 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                           controller: _captchaController,
                           enabled: !widget.isLoading,
                           textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(labelText: '验证码'),
+                          decoration: InputDecoration(
+                            labelText: context.tr('验证码'),
+                          ),
                           onChanged: widget.onCaptchaChanged,
                         ),
                       ],
@@ -177,7 +183,7 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('登录'),
+                              : Text(context.tr('登录')),
                         ),
                       ),
                       if (widget.onOfflineSchedule != null)
@@ -186,7 +192,7 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                               ? null
                               : widget.onOfflineSchedule,
                           icon: const Icon(Icons.calendar_month),
-                          label: const Text('离线课表'),
+                          label: Text(context.tr('离线课表')),
                         ),
                       if (widget.error case final error?) ...<Widget>[
                         const SizedBox(height: 16),
@@ -197,12 +203,12 @@ class _UbaaLoginViewState extends State<UbaaLoginView> {
                               context,
                               widget.onReadDiagnostics!,
                             ),
-                            child: const Text('查看诊断信息'),
+                            child: Text(context.tr('查看诊断信息')),
                           ),
                       ],
                       const SizedBox(height: 32),
                       Text(
-                        '开源项目: github.com/BUAASubnet/UBAA',
+                        context.tr('开源项目: github.com/BUAASubnet/UBAA'),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -268,7 +274,7 @@ class _LoginOptions extends StatelessWidget {
                     ? (value) => onRememberPasswordChanged(value ?? false)
                     : null,
               ),
-              const Text('记住密码'),
+              Text(context.tr('记住密码')),
             ],
           ),
           Row(
@@ -280,14 +286,14 @@ class _LoginOptions extends StatelessWidget {
                     ? (value) => onAutoLoginChanged(value ?? false)
                     : null,
               ),
-              const Text('自动登录'),
+              Text(context.tr('自动登录')),
             ],
           ),
         ],
       ),
       if (!persistenceAvailable)
         Text(
-          '当前平台暂未启用安全存储，密码只在本次运行中使用。',
+          context.tr('当前平台暂未启用安全存储，密码只在本次运行中使用。'),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -311,7 +317,7 @@ class _RoutePolicyButton extends StatelessWidget {
   Widget build(BuildContext context) => PopupMenuButton<RoutePolicy>(
     enabled: enabled,
     initialValue: policy,
-    tooltip: '连接模式',
+    tooltip: context.tr('连接模式'),
     onSelected: onChanged,
     itemBuilder: (context) => RoutePolicy.values
         .map(
@@ -324,8 +330,8 @@ class _RoutePolicyButton extends StatelessWidget {
                     ? Icons.radio_button_checked
                     : Icons.circle_outlined,
               ),
-              title: Text(item.label),
-              subtitle: Text(item.description),
+              title: Text(context.tr(item.label)),
+              subtitle: Text(context.tr(item.description)),
             ),
           ),
         )
@@ -333,7 +339,7 @@ class _RoutePolicyButton extends StatelessWidget {
     child: FilledButton.tonalIcon(
       onPressed: null,
       icon: const Icon(Icons.tune),
-      label: Text('模式：${policy.label}'),
+      label: Text(context.tr("模式：{0}", [context.tr(policy.label)])),
     ),
   );
 }

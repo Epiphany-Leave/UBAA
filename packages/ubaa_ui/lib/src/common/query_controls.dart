@@ -113,7 +113,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(14),
           child: IconButton(
-            tooltip: '筛选',
+            tooltip: context.tr('筛选'),
             onPressed: _submitting ? null : _openFilters,
             icon: const Icon(Icons.tune),
           ),
@@ -138,7 +138,10 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('筛选条件', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                context.tr('筛选条件'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 12,
@@ -162,7 +165,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('取消'),
+                    child: Text(context.tr('取消')),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
@@ -171,7 +174,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
                       _apply();
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('查询'),
+                    label: Text(context.tr('查询')),
                   ),
                 ],
               ),
@@ -212,7 +215,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
             if (mounted) {
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('周次必须是正整数。')));
+              ).showSnackBar(SnackBar(content: Text(context.tr('周次必须是正整数。'))));
             }
             return;
           }
@@ -236,7 +239,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
           if (date == null) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日期格式无效，请使用 YYYY-MM-DD。')),
+                SnackBar(content: Text(context.tr('日期格式无效，请使用 YYYY-MM-DD。'))),
               );
             }
             return;
@@ -258,7 +261,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
           if (page <= 0 || size <= 0 || size > 100) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('页码必须从 1 开始，每页数量须为 1–100。')),
+                SnackBar(content: Text(context.tr('页码必须从 1 开始，每页数量须为 1–100。'))),
               );
             }
             return;
@@ -469,7 +472,7 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
     required List<String> values,
     required ValueChanged<String> onSelected,
   }) => DropdownButton<String>(
-    hint: Text(label),
+    hint: Text(context.tr(label)),
     onChanged: _submitting || values.isEmpty
         ? null
         : (value) {
@@ -539,6 +542,6 @@ class _FeatureQueryControlsState extends State<_FeatureQueryControls> {
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: Text(context.tr(message))));
   }
 }

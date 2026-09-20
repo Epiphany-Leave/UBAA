@@ -16,6 +16,13 @@ part 'ubaa_app_host/recording_backend.dart';
 part 'ubaa_app_host/write_coordination.dart';
 
 void main() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(
+    () => binding.platformDispatcher.localesTestValue = [
+      const Locale('zh', 'CN'),
+    ],
+  );
+  tearDown(binding.platformDispatcher.clearLocalesTestValue);
   _registerBootstrapTests();
   _registerCallbackTests();
   _registerCapabilityGateTests();

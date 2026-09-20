@@ -9,30 +9,30 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
             ? null
             : (value) =>
                   setState(() => _cgyyView = value ?? FeatureQueryView.summary),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('站点列表'),
+            child: Text(context.tr('站点列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.cgyyPurposeTypes,
-            child: Text('用途类型'),
+            child: Text(context.tr('用途类型')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.cgyyDayInfo,
-            child: Text('日期空间'),
+            child: Text(context.tr('日期空间')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.cgyyOrders,
-            child: Text('订单列表'),
+            child: Text(context.tr('订单列表')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.cgyyOrderDetail,
-            child: Text('订单详情'),
+            child: Text(context.tr('订单详情')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.cgyyLockCode,
-            child: Text('门锁状态'),
+            child: Text(context.tr('门锁状态')),
           ),
         ],
       ),
@@ -42,9 +42,9 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _siteController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '站点 ID',
-              hintText: '从站点列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('站点 ID'),
+              hintText: context.tr('从站点列表选择'),
               isDense: true,
             ),
           ),
@@ -53,8 +53,8 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
           width: 140,
           child: TextField(
             controller: _dateController,
-            decoration: const InputDecoration(
-              labelText: '日期',
+            decoration: InputDecoration(
+              labelText: context.tr('日期'),
               hintText: 'YYYY-MM-DD',
               isDense: true,
             ),
@@ -72,9 +72,9 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _pageController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '页码',
-              hintText: '从 1 开始',
+            decoration: InputDecoration(
+              labelText: context.tr('页码'),
+              hintText: context.tr('从 1 开始'),
               isDense: true,
             ),
           ),
@@ -84,8 +84,8 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _sizeController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '每页数量',
+            decoration: InputDecoration(
+              labelText: context.tr('每页数量'),
               hintText: '1–100',
               isDense: true,
             ),
@@ -98,9 +98,9 @@ extension _CgyyQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _orderController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '订单 ID',
-              hintText: '从订单列表选择',
+            decoration: InputDecoration(
+              labelText: context.tr('订单 ID'),
+              hintText: context.tr('从订单列表选择'),
               isDense: true,
             ),
           ),
@@ -124,7 +124,7 @@ extension _CgyyDetailActions on _FeatureDetailListState {
           OutlinedButton.icon(
             onPressed: () => widget.onCgyyCancelWrite!(cgyyCancelAction),
             icon: const Icon(Icons.event_busy),
-            label: const Text('准备取消订单'),
+            label: Text(context.tr('准备取消订单')),
           ),
         ],
       ];
@@ -143,7 +143,7 @@ extension _CgyyDetailActions on _FeatureDetailListState {
           _cgyyReserveCandidates(cgyyReservation),
         ),
         icon: const Icon(Icons.event_available),
-        label: const Text('准备研讨室预约'),
+        label: Text(context.tr('准备研讨室预约')),
       ),
     ],
   ];

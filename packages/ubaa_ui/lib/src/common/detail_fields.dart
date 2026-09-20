@@ -12,7 +12,10 @@ class _DetailField extends StatelessWidget {
     children: <Widget>[
       SizedBox(
         width: 88,
-        child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        child: Text(
+          context.tr(label),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ),
       Expanded(child: Text(value)),
     ],

@@ -26,7 +26,7 @@ class _YgdkHeader extends StatelessWidget {
                   ? null
                   : () => onQuery(const FeatureQuery()),
               icon: const Icon(Icons.directions_run),
-              label: const Text('打卡概览'),
+              label: Text(context.tr('打卡概览')),
             ),
             OutlinedButton.icon(
               onPressed: snapshot.status == FeatureLoadStatus.loading
@@ -38,7 +38,7 @@ class _YgdkHeader extends StatelessWidget {
                       ),
                     ),
               icon: const Icon(Icons.history),
-              label: const Text('历史记录'),
+              label: Text(context.tr('历史记录')),
             ),
           ],
         ),
@@ -63,14 +63,14 @@ class _YgdkRecordCard extends StatelessWidget {
         onTap: () => showDialog<void>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('记录详情'),
+            title: Text(context.tr('记录详情')),
             content: SingleChildScrollView(
               child: _AcademicDetailCard(detail: detail),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+                child: Text(context.tr('关闭')),
               ),
             ],
           ),
@@ -105,13 +105,14 @@ class _YgdkRecordCard extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 8),
-              Text(time.isEmpty ? '时间未提供' : time),
+              Text(time.isEmpty ? context.tr('时间未提供') : time),
               const SizedBox(height: 8),
               Text(
                 [
-                  if (detail.subtitle != null) '提交于 ${detail.subtitle}',
+                  if (detail.subtitle != null)
+                    context.tr("提交于 {0}", [detail.subtitle]),
                   if (_academicField(detail, '图片数量') case final count?)
-                    '$count 张图片',
+                    context.tr("{0} 张图片", [count]),
                   if (_academicField(detail, '公开状态') case final visibility?)
                     visibility,
                 ].join(' · '),
@@ -134,11 +135,14 @@ extension _YgdkQueryControls on _FeatureQueryControlsState {
             ? null
             : (value) =>
                   setState(() => _ygdkView = value ?? FeatureQueryView.summary),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
-          DropdownMenuItem(value: FeatureQueryView.summary, child: Text('概览')),
+        items: <DropdownMenuItem<FeatureQueryView>>[
+          DropdownMenuItem(
+            value: FeatureQueryView.summary,
+            child: Text(context.tr('概览')),
+          ),
           DropdownMenuItem(
             value: FeatureQueryView.ygdkRecords,
-            child: Text('记录列表'),
+            child: Text(context.tr('记录列表')),
           ),
         ],
       ),
@@ -148,9 +152,9 @@ extension _YgdkQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _pageController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '页码',
-              hintText: '从 1 开始',
+            decoration: InputDecoration(
+              labelText: context.tr('页码'),
+              hintText: context.tr('从 1 开始'),
               isDense: true,
             ),
           ),
@@ -160,8 +164,8 @@ extension _YgdkQueryControls on _FeatureQueryControlsState {
           child: TextField(
             controller: _sizeController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '每页数量',
+            decoration: InputDecoration(
+              labelText: context.tr('每页数量'),
               hintText: '1–100',
               isDense: true,
             ),
@@ -184,7 +188,7 @@ extension _YgdkDetailActions on _FeatureDetailListState {
         onPressed: () =>
             _showYgdkForm(context, action: ygdkAction, title: detail.title),
         icon: const Icon(Icons.directions_run),
-        label: const Text('准备阳光打卡'),
+        label: Text(context.tr('准备阳光打卡')),
       ),
     ],
   ];

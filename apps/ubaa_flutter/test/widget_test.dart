@@ -6,6 +6,10 @@ import 'package:ubaa_platform/ubaa_platform.dart';
 
 void main() {
   testWidgets('启动后展示登录表单并可进入主页', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = [
+      const Locale('zh', 'CN'),
+    ];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
     await tester.pumpWidget(
       UbaaFlutterApp(
         backend: DemoBackend(loginDelay: Duration.zero),

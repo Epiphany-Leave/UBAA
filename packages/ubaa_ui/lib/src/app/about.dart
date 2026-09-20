@@ -32,7 +32,7 @@ class _AboutViewState extends State<_AboutView> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('请在浏览器打开'),
+        title: Text(context.tr('请在浏览器打开')),
         content: const SelectableText(url),
         actions: [
           TextButton(
@@ -40,11 +40,11 @@ class _AboutViewState extends State<_AboutView> {
               await Clipboard.setData(const ClipboardData(text: url));
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('复制地址'),
+            child: Text(context.tr('复制地址')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(context.tr('关闭')),
           ),
         ],
       ),
@@ -53,13 +53,13 @@ class _AboutViewState extends State<_AboutView> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('关于 UBAA')),
+    appBar: AppBar(title: Text(context.tr('关于 UBAA'))),
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text('UBAA', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
-        const Text('Make BUAA Great Again\n北航校园服务应用'),
+        Text(context.tr('Make BUAA Great Again\n北航校园服务应用')),
         const SizedBox(height: 24),
         FutureBuilder<String?>(
           future: _version,
@@ -68,11 +68,15 @@ class _AboutViewState extends State<_AboutView> {
             final version = snapshot.data;
             return ListTile(
               leading: const Icon(Icons.tag),
-              title: const Text('当前安装版本'),
-              subtitle: Text(loading ? '读取中…' : version ?? '当前平台暂无法读取版本'),
+              title: Text(context.tr('当前安装版本')),
+              subtitle: Text(
+                loading
+                    ? context.tr('读取中…')
+                    : version ?? context.tr('当前平台暂无法读取版本'),
+              ),
               trailing: !loading && version == null
                   ? IconButton(
-                      tooltip: '重试读取版本',
+                      tooltip: context.tr('重试读取版本'),
                       icon: const Icon(Icons.refresh),
                       onPressed: () => setState(() {
                         _version = _loadVersion();
@@ -84,12 +88,12 @@ class _AboutViewState extends State<_AboutView> {
         ),
         ListTile(
           leading: const Icon(Icons.open_in_new),
-          title: const Text('项目主页'),
+          title: Text(context.tr('项目主页')),
           onTap: _openProject,
         ),
         ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: const Text('开源许可'),
+          title: Text(context.tr('开源许可')),
           onTap: () =>
               showLicensePage(context: context, applicationName: 'UBAA'),
         ),

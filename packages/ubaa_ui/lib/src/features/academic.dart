@@ -43,7 +43,7 @@ class _SearchableAcademicListState extends State<_SearchableAcademicList> {
           right: 18,
           bottom: 18,
           child: FloatingActionButton(
-            tooltip: '搜索当前结果',
+            tooltip: context.tr('搜索当前结果'),
             onPressed: _showSearch,
             child: const Icon(Icons.search),
           ),
@@ -55,11 +55,11 @@ class _SearchableAcademicListState extends State<_SearchableAcademicList> {
   Future<void> _showSearch() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('搜索当前结果'),
+      title: Text(context.tr('搜索当前结果')),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(hintText: '输入课程、考试或其他内容'),
+        decoration: InputDecoration(hintText: context.tr('输入课程、考试或其他内容')),
         onChanged: (value) => setState(() => _query = value),
       ),
       actions: [
@@ -69,11 +69,11 @@ class _SearchableAcademicListState extends State<_SearchableAcademicList> {
             setState(() => _query = '');
             Navigator.pop(context);
           },
-          child: const Text('清除'),
+          child: Text(context.tr('清除')),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('完成'),
+          child: Text(context.tr('完成')),
         ),
       ],
     ),
@@ -90,18 +90,18 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
             ? null
             : (value) =>
                   setState(() => _examView = value ?? FeatureQueryView.summary),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('全部考试'),
+            child: Text(context.tr('全部考试')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.examArranged,
-            child: Text('已安排'),
+            child: Text(context.tr('已安排')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.examNotArranged,
-            child: Text('未安排'),
+            child: Text(context.tr('未安排')),
           ),
         ],
       ),
@@ -113,18 +113,18 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
             : (value) => setState(
                 () => _gradesView = value ?? FeatureQueryView.summary,
               ),
-        items: const <DropdownMenuItem<FeatureQueryView>>[
+        items: <DropdownMenuItem<FeatureQueryView>>[
           DropdownMenuItem(
             value: FeatureQueryView.summary,
-            child: Text('全部成绩'),
+            child: Text(context.tr('全部成绩')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.gradesScored,
-            child: Text('已出成绩'),
+            child: Text(context.tr('已出成绩')),
           ),
           DropdownMenuItem(
             value: FeatureQueryView.gradesMissing,
-            child: Text('待出成绩'),
+            child: Text(context.tr('待出成绩')),
           ),
         ],
       ),
@@ -135,10 +135,10 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         child: TextField(
           controller: _termController,
           decoration: InputDecoration(
-            labelText: '学期编码（可选）',
+            labelText: context.tr('学期编码（可选）'),
             hintText: widget.feature == FeatureId.grades
-                ? '研究生留空查看全部学期'
-                : '留空使用当前学期',
+                ? context.tr('研究生留空查看全部学期')
+                : context.tr('留空使用当前学期'),
             isDense: true,
           ),
         ),
@@ -149,8 +149,8 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         width: 150,
         child: TextField(
           controller: _dateController,
-          decoration: const InputDecoration(
-            labelText: '日期',
+          decoration: InputDecoration(
+            labelText: context.tr('日期'),
             hintText: 'YYYY-MM-DD',
             isDense: true,
           ),
@@ -160,9 +160,9 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         width: 130,
         child: TextField(
           controller: _floorController,
-          decoration: const InputDecoration(
-            labelText: '楼层（可选）',
-            hintText: '如 F2',
+          decoration: InputDecoration(
+            labelText: context.tr('楼层（可选）'),
+            hintText: context.tr('如 F2'),
             isDense: true,
           ),
         ),
@@ -171,9 +171,9 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         width: 130,
         child: TextField(
           controller: _sectionController,
-          decoration: const InputDecoration(
-            labelText: '节次（可选）',
-            hintText: '如 3',
+          decoration: InputDecoration(
+            labelText: context.tr('节次（可选）'),
+            hintText: context.tr('如 3'),
             isDense: true,
           ),
         ),
@@ -183,10 +183,10 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         onChanged: _submitting
             ? null
             : (value) => setState(() => _campus = value ?? 1),
-        items: const <DropdownMenuItem<int>>[
-          DropdownMenuItem(value: 1, child: Text('校区 1')),
-          DropdownMenuItem(value: 2, child: Text('校区 2')),
-          DropdownMenuItem(value: 3, child: Text('校区 3')),
+        items: <DropdownMenuItem<int>>[
+          DropdownMenuItem(value: 1, child: Text(context.tr('校区 1'))),
+          DropdownMenuItem(value: 2, child: Text(context.tr('校区 2'))),
+          DropdownMenuItem(value: 3, child: Text(context.tr('校区 3'))),
         ],
       ),
     ],
@@ -197,7 +197,9 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
       return [
         FilledButton(
           onPressed: _submitting ? null : () => _showWeek(),
-          child: Text(_submitting ? '正在加载课表…' : '查看本周课表'),
+          child: Text(
+            _submitting ? context.tr('正在加载课表…') : context.tr('查看本周课表'),
+          ),
         ),
       ];
     }
@@ -215,7 +217,7 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
         onChanged: _submitting ? null : (term) => _showWeek(term: term),
       ),
       IconButton(
-        tooltip: '上一周',
+        tooltip: context.tr('上一周'),
         icon: const Icon(Icons.chevron_left),
         onPressed: _submitting || index <= 0
             ? null
@@ -234,7 +236,7 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
             : (week) => _showWeek(term: nav.term, week: week),
       ),
       IconButton(
-        tooltip: '下一周',
+        tooltip: context.tr('下一周'),
         icon: const Icon(Icons.chevron_right),
         onPressed: _submitting || index < 0 || index >= weeks.length - 1
             ? null
@@ -242,7 +244,7 @@ extension _AcademicQueryControls on _FeatureQueryControlsState {
       ),
       TextButton(
         onPressed: _submitting ? null : () => _showWeek(),
-        child: const Text('回到本周'),
+        child: Text(context.tr('回到本周')),
       ),
     ];
   }
@@ -287,7 +289,7 @@ List<Widget> _examSection(
   }
   final dates = grouped.keys.toList()..sort();
   return <Widget>[
-    Text(title, style: Theme.of(context).textTheme.titleMedium),
+    Text(context.tr(title), style: Theme.of(context).textTheme.titleMedium),
     const SizedBox(height: 8),
     for (final date in dates) ...<Widget>[
       Padding(
@@ -340,14 +342,14 @@ class _ExamCompactCard extends StatelessWidget {
         onTap: () => showDialog<void>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('考试详情'),
+            title: Text(context.tr('考试详情')),
             content: SingleChildScrollView(
               child: _AcademicDetailCard(detail: detail),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+                child: Text(context.tr('关闭')),
               ),
             ],
           ),
@@ -366,7 +368,7 @@ class _ExamCompactCard extends StatelessWidget {
               if (seat != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text('座位 $seat'),
+                  child: Text(context.tr("座位 {0}", [seat])),
                 ),
               const SizedBox(height: 10),
               Row(
@@ -413,16 +415,22 @@ class _GradesList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: <Widget>[
         if (statistics.isNotEmpty) ...<Widget>[
-          Text('成绩统计', style: Theme.of(context).textTheme.titleMedium),
-          const Padding(
+          Text(
+            context.tr('成绩统计'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Padding(
             padding: EdgeInsets.only(top: 4, bottom: 8),
-            child: Text('GPA 与加权均分由成绩规则计算。'),
+            child: Text(context.tr('GPA 与加权均分由成绩规则计算。')),
           ),
           for (final detail in statistics) _GradeStatisticsCard(detail: detail),
           const SizedBox(height: 12),
         ],
         if (courses.isNotEmpty)
-          Text('课程成绩', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            context.tr('课程成绩'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         for (final detail in courses) _GradeCourseCard(detail: detail),
       ],
     );
@@ -461,7 +469,7 @@ class _GradeStatisticsCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         Text(
-                          field.label,
+                          context.tr(field.label),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -488,14 +496,14 @@ class _GradeCourseCard extends StatelessWidget {
       onTap: () => showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('成绩详情'),
+          title: Text(context.tr('成绩详情')),
           content: SingleChildScrollView(
             child: _AcademicDetailCard(detail: detail),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
+              child: Text(context.tr('关闭')),
             ),
           ],
         ),
@@ -530,7 +538,7 @@ class _GradeCourseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _academicField(detail, '成绩') ?? '待出',
+                      _academicField(detail, '成绩') ?? context.tr('待出'),
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -556,7 +564,7 @@ class _GradeCourseCard extends StatelessWidget {
                 '学期',
               }.contains(field.label)) ...[
                 const SizedBox(height: 6),
-                Text('${field.label}：${field.value}'),
+                Text('${context.tr(field.label)}：${field.value}'),
               ],
           ],
         ),

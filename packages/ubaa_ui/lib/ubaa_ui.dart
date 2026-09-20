@@ -2,6 +2,7 @@
 library;
 
 export 'src/appearance.dart';
+export 'src/localization.dart';
 
 export 'src/theme.dart';
 export 'src/write_callbacks.dart';

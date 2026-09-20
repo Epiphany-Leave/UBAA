@@ -116,6 +116,19 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: 生成待核对的 macOS 截图（不替代测试结果）
+        if: failure()
+        working-directory: packages/ubaa_ui
+        run: flutter test --no-pub --update-goldens --plain-name '视觉基线'
+      - name: 保存待核对的 macOS 截图
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ubaa-flutter-golden-candidates-${{ github.run_id }}
+          path: packages/ubaa_ui/test/goldens/*.png
+          if-no-files-found: error
+          retention-days: 14
+
   rust-platforms:
     strategy:
       fail-fast: false

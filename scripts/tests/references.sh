@@ -21,6 +21,12 @@ trap 'rm -rf -- "$test_root"' EXIT
 
 origin_work=$test_root/origin-work
 remote=$test_root/reference.git
+wrong_remote=$test_root/wrong.git
+# Git stores local URLs in native form; keep POSIX test_root for PATH entries.
+if command -v cygpath >/dev/null 2>&1; then
+  remote=$(cygpath -m "$remote")
+  wrong_remote=$(cygpath -m "$wrong_remote")
+fi
 sandbox=$test_root/sandbox
 mkdir -p "$origin_work" "$sandbox"
 git -C "$origin_work" init -q
@@ -29,10 +35,6 @@ git -C "$origin_work" add reference.txt
 git -C "$origin_work" -c user.name=UBAA -c user.email=ubaa@example.invalid commit -q -m fixture
 locked_commit=$(git -C "$origin_work" rev-parse HEAD)
 git clone -q --bare "$origin_work" "$remote"
-# Git for Windows stores local clone URLs as native absolute paths.
-if command -v cygpath >/dev/null 2>&1; then
-  remote=$(cygpath -m "$remote")
-fi
 
 # 缺失引用只能失败和提示显式 bootstrap，不得创建任何路径。
 missing=$sandbox/missing
@@ -74,14 +76,14 @@ PATH="$test_root/fake-bin:$PATH" REAL_GIT="$real_git" \
 grep -F "reference @ $locked_commit" "$test_root/correct.out" >/dev/null
 
 # remote、HEAD 与工作树任一不符都必须失败，且不得自动规范化。
-git -C "$reference" remote set-url origin "$test_root/wrong.git"
+git -C "$reference" remote set-url origin "$wrong_remote"
 if check_reference "$sandbox" "$reference" "$remote" "$locked_commit" \
   >"$test_root/remote.out" 2>"$test_root/remote.err"; then
   printf '%s\n' '错误 remote 被纯校验接受' >&2
   exit 1
 fi
 grep -F '远端不匹配' "$test_root/remote.err" >/dev/null
-[[ $(git -C "$reference" remote get-url origin) == "$test_root/wrong.git" ]]
+[[ $(git -C "$reference" remote get-url origin) == "$wrong_remote" ]]
 git -C "$reference" remote set-url origin "$remote"
 
 git -C "$reference" -c user.name=UBAA -c user.email=ubaa@example.invalid \

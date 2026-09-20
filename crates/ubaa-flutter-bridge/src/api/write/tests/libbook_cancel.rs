@@ -33,14 +33,14 @@ async fn 图书馆取消读取投影只从canonical状态产生typed资格() {
         .expect("读取 typed 图书馆预约")
         .data;
 
-    assert_eq!(page.bookings.len(), 6);
+    assert_eq!(page.bookings.len(), 7);
     assert_eq!(page.bookings[0].status, Some(1));
     assert!(matches!(
         page.bookings[0].cancel_eligibility,
         BridgeActionEligibility::Allowed
     ));
     assert_eq!(page.bookings[0].cancel_target.as_deref(), Some("allowed"));
-    assert_eq!(page.bookings[0].status_name, "已结束");
+    assert_eq!(page.bookings[0].status_name, "预约成功");
     for booking in &page.bookings[1..3] {
         assert!(matches!(
             booking.cancel_eligibility,
@@ -48,13 +48,17 @@ async fn 图书馆取消读取投影只从canonical状态产生typed资格() {
         ));
         assert_eq!(booking.cancel_target.as_deref(), Some(booking.id.as_str()));
     }
-    for booking in &page.bookings[3..] {
+    for booking in &page.bookings[3..6] {
         assert!(matches!(
             booking.cancel_eligibility,
             BridgeActionEligibility::Unknown
         ));
         assert!(booking.cancel_target.is_none());
     }
+    assert!(matches!(
+        page.bookings[6].cancel_eligibility,
+        BridgeActionEligibility::Denied
+    ));
     let requests = direct.requests().expect("读取请求");
     assert_bookings_page_body(&requests, PAGE, LIMIT);
     direct.assert_exhausted().expect("只读取指定预约页");
@@ -659,7 +663,7 @@ fn allowed_bookings_request() -> ExpectedRequest {
     libbook_bookings_request(bookings_body(
         BOOKING_ID,
         "1",
-        "已结束",
+        "预约成功",
         "脱敏\\n预约\\u0000",
     ))
 }
@@ -691,13 +695,14 @@ fn bookings_body(id: &str, status: &str, status_name: &str, name: &str) -> Strin
 fn bookings_matrix_body() -> String {
     format!(
         r#"{{"code":1,"data":{{"list":[
-            {{"id":"allowed","status":1,"statusName":"已结束"}},
+            {{"id":"allowed","status":1,"statusName":"预约成功"}},
             {{"id":"denied-6","status":6,"statusName":"已预约"}},
             {{"id":"denied-8","status":8,"statusName":"已预约"}},
             {{"id":"missing","statusName":"已预约"}},
             {{"id":"noncanonical","status":"01","statusName":"已预约"}},
-            {{"id":"other","status":9,"statusName":"已预约"}}
-        ],"page":{PAGE},"limit":{LIMIT},"total":6}}}}"#,
+            {{"id":"other","status":9,"statusName":"已预约"}},
+            {{"id":"ended","status":1,"statusName":"已结束"}}
+        ],"page":{PAGE},"limit":{LIMIT},"total":7}}}}"#,
     )
 }
 

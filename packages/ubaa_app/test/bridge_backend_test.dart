@@ -7,6 +7,7 @@ part 'bridge_backend/libbook.dart';
 part 'bridge_backend/cgyy.dart';
 part 'bridge_backend/evaluation.dart';
 part 'bridge_backend/ygdk.dart';
+part 'bridge_backend/assignments.dart';
 
 void main() {
   _registerLibbookBridgeBackendTests();
@@ -131,12 +132,12 @@ void main() {
     expect(result.resolvedRoute, ConnectionMode.webvpn);
   });
 
-  test('BridgeBackend 课堂签到只按 typed 资格筛选并构造 typed action', () async {
+  test('未签到筛选保留未开放课程，操作仍遵守 Core 资格', () async {
     final response = BridgeRoutedSigninClasses(
       data: const <BridgeSigninClass>[
         BridgeSigninClass(
           courseId: 'course-1',
-          courseName: '已签到课程',
+          courseName: '未签到但未开放',
           classBeginTime: '08:00',
           classEndTime: '09:00',
           signStatus: 0,
@@ -169,16 +170,35 @@ void main() {
     );
 
     expect(result.summary, '1门未签到课程');
-    expect(result.details.single.title, '未签到课程');
+    expect(result.signinDays.single.courses, [
+      SigninDisplayStatus.pending,
+      SigninDisplayStatus.signed,
+    ]);
+    expect(result.details.single.title, '未签到但未开放');
     expect(
       result.details.single.action<SigninPerformAction>()?.scheduleId,
-      'allowed-target-safe',
+      'denied-target-safe',
     );
     expect(
       result.details.single.action<SigninPerformAction>()?.eligibility,
-      ActionEligibility.allowed,
+      ActionEligibility.denied,
     );
     expect(result.resolvedRoute, ConnectionMode.direct);
+    final future = await BridgeBackend(
+      _FakeSigninClient(response, future: true),
+    ).loadFeatureQuery(FeatureId.signin, const FeatureQuery());
+    expect(
+      future.signinDays.single.courses,
+      everyElement(SigninDisplayStatus.unknown),
+    );
+    expect(
+      future.details.every(
+        (detail) => detail.fields.any(
+          (field) => field.label == '签到状态' && field.value == '未到日期',
+        ),
+      ),
+      isTrue,
+    );
   });
 
   test('BridgeBackend SPOC 列表保留课程编号供详情选择', () async {
@@ -821,34 +841,6 @@ class _FakeJudgeBatchClient extends _CompatibleBridgeClient {
         'c-1/a-1',
       ]);
       return Future<BridgeRoutedJudgeAssignmentDetails>.value(response);
-    }
-    throw UnsupportedError('unexpected bridge call: ${invocation.memberName}');
-  }
-}
-
-class _FakeSigninClient extends _CompatibleBridgeClient {
-  _FakeSigninClient(this.response);
-
-  final BridgeRoutedSigninClasses response;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #signinToday) {
-      return Future<BridgeRoutedSigninClasses>.value(response);
-    }
-    throw UnsupportedError('unexpected bridge call: ${invocation.memberName}');
-  }
-}
-
-class _FakeSpocClient extends _CompatibleBridgeClient {
-  _FakeSpocClient(this.response);
-
-  final BridgeRoutedSpocAssignments response;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #spocAssignments) {
-      return Future<BridgeRoutedSpocAssignments>.value(response);
     }
     throw UnsupportedError('unexpected bridge call: ${invocation.memberName}');
   }

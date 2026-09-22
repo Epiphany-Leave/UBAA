@@ -34,6 +34,33 @@ abstract class BridgeClient implements RustOpaqueInterface {
 
   Future<BridgeRoutedBykcStatistics> bykcStatistics();
 
+  Future<BridgeRoutedExamArrangement> cachedExamArrangement({
+    required String term,
+    required bool refresh,
+  });
+
+  Future<BridgeRoutedTerms> cachedExamTerms({required bool refresh});
+
+  Future<BridgeRoutedGradeOverview> cachedGradeOverview({
+    required bool refresh,
+  });
+
+  Future<BridgeRoutedGrades> cachedGrades({
+    required String term,
+    required bool refresh,
+  });
+
+  Future<BridgeRoutedJudgeSummaries> cachedJudgeAssignments({
+    required bool includeExpired,
+    required bool refresh,
+  });
+
+  Future<BridgeRoutedTerms> cachedScheduleTerms({required bool refresh});
+
+  Future<BridgeRoutedSpocAssignments> cachedSpocAssignments({
+    required bool refresh,
+  });
+
   Future<BridgeRoutedCgyyDayInfo> cgyyDayInfo({
     required int siteId,
     required String date,
@@ -232,12 +259,19 @@ abstract class BridgeClient implements RustOpaqueInterface {
   ///
   /// # Errors
   ///
-  /// 另一个 bridge 操作占用客户端、客户端已销毁、配置保存失败或重开失败时返回安全错误。
+  /// 等待在途操作释放客户端；客户端已销毁、配置保存失败或重开失败时返回安全错误。
   Future<BridgeRouteSettings> setDefaultRoutePolicy({
     required BridgeRoutePolicy policy,
   });
 
+  Future<BridgeRoutedSigninClasses> signinOn({required String date});
+
   Future<BridgeRoutedSigninClasses> signinToday();
+
+  Future<BridgeRoutedSigninWeek> signinWeek({
+    required String date,
+    required bool refresh,
+  });
 
   Future<BridgeRoutedSpocAssignmentDetail> spocAssignment({
     required String assignmentId,
@@ -394,6 +428,8 @@ enum BridgeNetworkState { campus, offCampus, unknown }
 
 /// 一次 Core 路线决策的安全投影。
 class BridgeRouteDecision {
+  final String? savedAt;
+  final bool? fromCache;
   final BridgeRoutePolicy policy;
   final BridgeConnectionMode resolvedRoute;
   final BridgeNetworkState network;
@@ -401,6 +437,8 @@ class BridgeRouteDecision {
   final bool usedFallback;
 
   const BridgeRouteDecision({
+    this.savedAt,
+    this.fromCache,
     required this.policy,
     required this.resolvedRoute,
     required this.network,
@@ -410,6 +448,8 @@ class BridgeRouteDecision {
 
   @override
   int get hashCode =>
+      savedAt.hashCode ^
+      fromCache.hashCode ^
       policy.hashCode ^
       resolvedRoute.hashCode ^
       network.hashCode ^
@@ -421,6 +461,8 @@ class BridgeRouteDecision {
       identical(this, other) ||
       other is BridgeRouteDecision &&
           runtimeType == other.runtimeType &&
+          savedAt == other.savedAt &&
+          fromCache == other.fromCache &&
           policy == other.policy &&
           resolvedRoute == other.resolvedRoute &&
           network == other.network &&

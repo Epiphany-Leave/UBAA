@@ -531,6 +531,10 @@ void _registerWriteTests() {
         expect(backend.queries, hasLength(1));
         expect(backend.queries.single.$1, FeatureId.cgyy);
         expect(backend.queries.single.$2.view, FeatureQueryView.cgyyOrders);
+      } else if (operation == WriteOperation.signinPerform) {
+        expect(backend.loadedFeatures, isEmpty);
+        expect(backend.queries.single.$1, FeatureId.signin);
+        expect(backend.queries.single.$2.refresh, isTrue);
       } else if (operation == WriteOperation.cgyyCancelOrder ||
           operation == WriteOperation.ygdkSubmit ||
           operation == WriteOperation.evaluationSubmitCourses) {

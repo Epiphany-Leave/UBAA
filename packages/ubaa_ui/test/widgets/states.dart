@@ -754,7 +754,10 @@ void _registerSharedStateTests() {
             await tester.pump();
           case FeatureLoadStatus.stale:
             expect(find.text('测试读取失败'), findsOneWidget);
-            expect(find.text('上次成功详情'), findsOneWidget);
+            expect(
+              find.text('上次成功详情'),
+              feature == FeatureId.signin ? findsNothing : findsOneWidget,
+            );
             await tester.tap(find.text('重试').last);
             await tester.pump();
           case FeatureLoadStatus.idle || FeatureLoadStatus.success:

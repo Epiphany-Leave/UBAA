@@ -59,7 +59,7 @@ extension FeatureIdText on FeatureId {
     FeatureId.spoc => '查看当前学期作业与提交状态',
     FeatureId.judge => '聚合希冀平台作业与提交进度',
     FeatureId.libbook => '查看图书馆座位和预约记录',
-    FeatureId.signin => '查看今日课程签到状态',
+    FeatureId.signin => '按日期查看课程，开课前十分钟开放签到',
     FeatureId.cgyy => '查看场馆站点、日期和预约订单',
     FeatureId.ygdk => '查看学期进度与打卡记录',
     FeatureId.evaluation => '查看待评课程和完成进度',

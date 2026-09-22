@@ -194,8 +194,9 @@ class _FailingReadClient implements BridgeClient {
 
 class _UnsupportedExamClient extends _FailingReadClient {
   @override
-  Future<BridgeRoutedExamArrangement> examArrangement({
+  Future<BridgeRoutedExamArrangement> cachedExamArrangement({
     required String term,
+    required bool refresh,
   }) async => throw const BridgeError(
     code: BridgeErrorCode.unsupported,
     kind: BridgeErrorKind.upstream,

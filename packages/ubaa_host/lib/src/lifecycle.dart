@@ -59,8 +59,9 @@ class _UbaaAppHostState extends State<UbaaAppHost> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
+    // Ordinary backgrounding keeps the Dart isolate and Rust handle alive.
+    // Only a detached host needs backend recovery, not Home or a system picker.
+    if (state == AppLifecycleState.detached) {
       _wasBackgrounded = true;
       return;
     }

@@ -484,7 +484,10 @@ class _BykcViewState extends State<_BykcView> {
             SizedBox(height: 360, child: _stateMessage('暂无博雅课程统计'))
           else ...[
             const _BykcStatisticsHeader(),
-            for (final item in _statistics) _BykcStatisticsRow(detail: item),
+            for (final item in _statistics) ...[
+              _BykcStatisticsRow(detail: item),
+              const SizedBox(height: 12),
+            ],
           ],
         ],
       ),

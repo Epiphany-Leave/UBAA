@@ -9,7 +9,7 @@ use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::config::FeatureRouteConfig;
@@ -23,7 +23,7 @@ const GATEWAY_PORT: u16 = 80;
 const DEFAULT_GATEWAY_CACHE_TTL: Duration = Duration::from_secs(60);
 
 /// 探测北航校园网关得到的三态结果。
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NetworkState {
     /// 至少一个解析出的网关地址接受了 TCP 连接。
@@ -158,7 +158,7 @@ impl<P: GatewayProbe> GatewayProbe for CachingGatewayProbe<P> {
 }
 
 /// 可安全暴露到诊断信息和 JSON 的路线决策元数据。
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RouteDiagnostic {
     /// 本次决策观察到的网关可达性状态。
     pub network: NetworkState,
@@ -184,7 +184,7 @@ impl RouteDiagnostic {
 }
 
 /// 已解析路线及安全诊断信息。
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RouteResolution {
     /// 本次操作选择的具体连接路线。
     pub mode: ConnectionMode,

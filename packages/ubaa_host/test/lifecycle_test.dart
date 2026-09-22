@@ -40,7 +40,6 @@ void main() {
   });
 
   for (final backgroundState in <AppLifecycleState>[
-    AppLifecycleState.paused,
     AppLifecycleState.detached,
   ]) {
     testWidgets('${backgroundState.name} 后首次 resumed 只重建一次并单次释放', (
@@ -106,7 +105,7 @@ void main() {
     await first.authStarted.future;
     expect(factoryCalls, 1);
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.detached);
     await tester.pump();
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     await tester.pump();
@@ -198,11 +197,7 @@ void main() {
 }
 
 Future<void> _backgroundAndResume(WidgetTester tester) async {
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-  await tester.pump();
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-  await tester.pump();
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.detached);
   await tester.pump();
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await tester.pump();

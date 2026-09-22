@@ -1,5 +1,21 @@
 # 当前迁移与交付状态
 
+2026-09-22 提交整理：本轮后台恢复、系统返回、跨重启缓存、签到日期周卡、阳光表单及线路切换修复统一更新到个人 `UBAA2` 分支及完整参考 PR #97；不混入独立的研究生接口 PR #98。已交付 ARM64 `output/arm64/UBAA2-arm64-release-route-cards-fix.apk`，成品权限、原生库、TLS JNI、签名及 ZIP 对齐检查通过；最新真机回归仍待确认。Rust 工作区测试与全特性 Clippy 通过，完整 CI 结果以提交对应 Actions 为准；本机严格门禁仍缺少 `zip`，视觉基线需在固定 macOS CI 上复核。[手机日历人工验收](calendar-device-testing.md) 明确权限、冲突、取消保存、提醒和未验范围。下方逐轮记录保留当时状态，不代表最新交付包的验收结论。
+
+2026-09-22 真机反馈修复：线路/账号切换使在途查询失效时，统一结束 loading 并提供重试，旧结果仍不能回写；Bridge 切换策略等待 Core 锁，避免与普通读取碰撞直接返回 operation_conflict。切换期间显示进度，阻止重复切换和新查询。博雅统计卡片、个人设置卡片补间距，个人页路线选择上下排列。未改变学校协议、本研分流或真实写入规则，实网签到仍待验证。[证据](evidence/2026-09-22-route-loading-cards.md)。
+
+2026-09-22 阳光打卡布局：概览/历史页统一底部“去打卡”，填写改为全屏项目、时间、地点、照片分组卡片；项目只取 Core 已确认的 typed action，保留 prepare/confirm/commit 与结果不确定处理。“首页提醒”开关移入阳光子页，首页仅显示已开启的提醒。15 项阳光 UI 测试与 21 项宿主测试通过，Pixel 8 x86_64 Debug 已安装并正常启动，实际页面体验待用户验证；未执行真实打卡，未构建 ARM64。[证据与限制](evidence/2026-09-22-ygdk-layout.md)。
+
+2026-09-22 签到第二轮：日期周卡首次查询整周后按账号/周持久保存，换日读取本地，手动刷新和签到成功后的回读更新整周；失败不覆盖旧快照。未来日期由 Core 按北京时间计算并投影灰色。筛选改为工具栏内弹出菜单，消除叠层重叠；点阵固定四列三行，完整数量独立显示。同一非空签到安排 ID 且名称/时间/状态一致的教师重复行在共享解析层合并，读显示与写前复核一致；矛盾记录关闭目标，不按课程名合并不同安排。Pixel 8 第二轮待验；不交付 ARM64。[证据与限制](evidence/2026-09-22-cache-signin.md)。
+
+2026-09-22 跨重启缓存与课堂签到：Core 在现有私有原子存储中保存成绩、考试、学期和作业清单，按账号及查询条件隔离；失败保留旧快照，成功空结果替换旧值，启动不再请求所有实时模块。签到支持日期查询、课表补充和北京时间开课前十分钟门槛；写前重新验证学校资格。用户在 Pixel 8 确认首版缓存重启/手动刷新、日期切换和提前签到限制可用。随后按反馈增加一周日期卡片、课程数量及状态点，本地课表提供待查询数量，点选日期才查询该日状态；迟到状态未获得学校字段证据，暂不推断。第二版仅生成 Pixel 8 x86_64 Debug，待界面验收。本科/研究生分流不变，未进行真实签到写入。[实现与验证记录](evidence/2026-09-22-cache-signin.md)。
+
+2026-09-22 手机生命周期：修复普通 paused/resumed 错误重建 backend 引发的登录页重现和全量重读；主界面接入系统返回，复用逐层返回及写操作取消保护。相关测试通过，真机待验。[修复证据及缓存后续](mobile-lifecycle-and-cache.md) 区分内存保留与持久缓存；用户确认校外希冀/签到在 WebVPN 下可正常返回空数据。
+
+2026-09-22 Android Release TLS 修复：补权限后真机仍报 network_error，进一步确认 R8 usage.txt 删除 rustls-platform-verifier 的 JNI 校验类，旧 APK 的 DEX 检查同样失败。按依赖 README 增加精确 keep 规则，重建 ARM64 Release 后成品检查通过；新增 `scripts/release/check-android-apk.ps1` 检查权限、原生库、TLS 类、签名和 ZIP 对齐。[打包问题与验收清单](android-release-checklist.md) 记录已确认问题及待验事项。交付 `output/arm64/UBAA2-arm64-release-tls-fix.apk`，实体手机登录仍待复测。
+
+2026-09-22 Android Release 联网修复：真机登录报 network_error，检查已交付 APK 确认缺少 INTERNET 权限（原先仅 debug/profile 声明）。将权限补到 main manifest，覆盖所有构建类型，不改变登录协议或本科/研究生分流。ARM64 Release 重建通过，成品权限和签名检查通过，refs 与敏感扫描通过；安装包为 `output/arm64/UBAA2-arm64-release-network-fix.apk`，实体手机登录待用户复测。
+
 2026-09-20 PR #97：最新版已上传至 `Epiphany-Leave/UBAA:UBAA2`，向上游 `ubaa2` 创建草稿 PR。语言提交 `9c89a307` 的四项 CI 全通过；另补充 Direct/WebVPN 学业接口失败不跨身份回退的测试，Core 全特性测试通过。上游 41 个后续提交导致 77 个合并冲突，未完成的合并已撤回，PR 暂不可合并；不得把来源分支 CI 当作合并结果验收。详见 [PR 与隔离复核](evidence/2026-09-20-pr97-isolation.md)。
 
 2026-09-20 ui25：博雅详情/已选课程接入可选手机日历冲突检测、课程日程与预告选课提醒；时间转换和重叠判断经 Rust facade/bridge，Android 系统日历编辑页负责保存，iOS EventKit/EventKitUI 适配已编写。日历不上传、不落盘、不进入诊断；本科/研究生数据层不变。Pixel 8 待用户安装 `output/UBAA2-pixel8-boya-calendar-ui25.apk` 验证；iOS 尚未在 Mac/Xcode 编译或真机验证。检查结果与手动步骤见 [日历验收记录](evidence/2026-09-20-boya-calendar.md)。

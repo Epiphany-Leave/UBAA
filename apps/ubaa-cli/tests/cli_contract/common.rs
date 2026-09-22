@@ -541,6 +541,7 @@ fn signin_class(
         sign_status,
         signin_eligibility,
         signin_target: Some(course_id.into()),
+        availability_message: None,
     }
 }
 

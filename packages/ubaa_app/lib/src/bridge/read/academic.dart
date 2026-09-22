@@ -116,9 +116,14 @@ Future<FeatureResult> _loadAcademicFeature(
         case FeatureQueryView.summary:
         case FeatureQueryView.examArranged:
         case FeatureQueryView.examNotArranged:
-          final term = query.term ?? await _selectedExamTerm(backend);
+          final term =
+              query.term ??
+              await _selectedExamTerm(backend, refresh: query.refresh);
           if (term == null) return const FeatureResult.empty();
-          final result = await client.examArrangement(term: term);
+          final result = await client.cachedExamArrangement(
+            term: term,
+            refresh: query.refresh,
+          );
           final exams = switch (query.view) {
             FeatureQueryView.examArranged => [
               for (final item in result.data.arranged)
@@ -169,6 +174,7 @@ Future<FeatureResult> _loadAcademicFeature(
             label,
             details: details,
             resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
+            savedAt: result.route.savedAt,
           );
         default:
           throw const BackendException(UbaaErrorCode.invalidInput);
@@ -179,7 +185,7 @@ Future<FeatureResult> _loadAcademicFeature(
         case FeatureQueryView.gradesScored:
         case FeatureQueryView.gradesMissing:
           final overview = query.term == null
-              ? await client.gradeOverview()
+              ? await client.cachedGradeOverview(refresh: query.refresh)
               : null;
           late final List<BridgeGrade> allGrades;
           late final BridgeRouteDecision route;
@@ -187,9 +193,14 @@ Future<FeatureResult> _loadAcademicFeature(
             allGrades = overview!.data.grades;
             route = overview.route;
           } else {
-            final term = query.term ?? await _selectedTerm(backend);
+            final term =
+                query.term ??
+                await _selectedTerm(backend, refresh: query.refresh);
             if (term == null) return const FeatureResult.empty();
-            final result = await client.grades(term: term);
+            final result = await client.cachedGrades(
+              term: term,
+              refresh: query.refresh,
+            );
             allGrades = result.data.grades;
             route = result.route;
           }
@@ -244,6 +255,7 @@ Future<FeatureResult> _loadAcademicFeature(
           if (overview?.data.graduate == true &&
               query.view == FeatureQueryView.summary) {
             return FeatureResult.success(
+              savedAt: DateTime.tryParse(route.savedAt ?? ''),
               summary: grades.isEmpty
                   ? '暂无成绩，统计将在成绩公布后更新'
                   : '${grades.length}$label',
@@ -256,6 +268,7 @@ Future<FeatureResult> _loadAcademicFeature(
             label,
             details: details,
             resolvedRoute: _toConnectionMode(route.resolvedRoute),
+            savedAt: route.savedAt,
           );
         default:
           throw const BackendException(UbaaErrorCode.invalidInput);
@@ -291,8 +304,11 @@ Future<FeatureResult> _loadAcademicFeature(
   }
 }
 
-Future<String?> _selectedTerm(BridgeBackend backend) async {
-  final result = await backend.client.scheduleTerms();
+Future<String?> _selectedTerm(
+  BridgeBackend backend, {
+  bool refresh = false,
+}) async {
+  final result = await backend.client.cachedScheduleTerms(refresh: refresh);
   for (final term in result.data) {
     if (term.selected && term.itemCode.trim().isNotEmpty) return term.itemCode;
   }
@@ -302,8 +318,11 @@ Future<String?> _selectedTerm(BridgeBackend backend) async {
   return null;
 }
 
-Future<String?> _selectedExamTerm(BridgeBackend backend) async {
-  final result = await backend.client.examTerms();
+Future<String?> _selectedExamTerm(
+  BridgeBackend backend, {
+  bool refresh = false,
+}) async {
+  final result = await backend.client.cachedExamTerms(refresh: refresh);
   for (final term in result.data) {
     if (term.selected && term.itemCode.trim().isNotEmpty) return term.itemCode;
   }

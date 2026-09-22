@@ -32,6 +32,7 @@ class UbaaMainShell extends StatefulWidget {
     this.initialTab = 0,
     this.currentTime,
     this.activeRoutes = const <ConnectionMode>[],
+    this.changingRoute = false,
     this.onReadDiagnostics,
     this.onLoadAppVersion,
     this.onOpenProject,
@@ -82,6 +83,7 @@ class UbaaMainShell extends StatefulWidget {
   /// 固定预览与截图测试的日期；宿主省略时使用设备时间。
   final DateTime? currentTime;
   final List<ConnectionMode> activeRoutes;
+  final bool changingRoute;
 
   /// 宿主提供本轮允许字段的脱敏报告，不读取账号或业务数据。
   final String Function()? onReadDiagnostics;
@@ -180,6 +182,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
             boyaCalendar: widget.boyaCalendar,
             feature: _openedFeature!,
             snapshot: widget.snapshots[_openedFeature!]!,
+            timetable: widget.snapshots[FeatureId.schedule]?.timetable,
             query:
                 _featureQueries[_openedFeature!] ??
                 FeatureQuery(date: widget.currentTime),
@@ -191,7 +194,10 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
               final query = _featureQueries[feature];
               return query == null || widget.onFeatureQuery == null
                   ? widget.onRetryFeature(feature)
-                  : widget.onFeatureQuery!(feature, query);
+                  : widget.onFeatureQuery!(
+                      feature,
+                      query.copyWith(refresh: true),
+                    );
             },
             onQuery: widget.onFeatureQuery == null
                 ? null
@@ -199,6 +205,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
                     final feature = _openedFeature!;
                     _featureQueries[feature] = query.copyWith(
                       updateSchedule: false,
+                      refresh: false,
                     );
                     return widget.onFeatureQuery!(feature, query);
                   },
@@ -237,63 +244,81 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
             onYgdkSubmitWrite: !_hasYgdkSubmissionCapabilities
                 ? null
                 : _startYgdkSubmitWrite,
+            onLoadYgdkReminder: widget.onLoadYgdkReminder,
+            onSaveYgdkReminder: widget.onSaveYgdkReminder,
             onPickYgdkPhoto: _hasYgdkSubmissionCapabilities
                 ? widget.onPickYgdkPhoto
                 : null,
           );
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          pendingWrite == null
-              ? context.tr(
-                  _openedSubpage?.title ??
-                      _openedFeature?.title ??
-                      _tabs[_selectedIndex].label,
-                )
-              : context.tr("确认{0}", [context.tr(pendingWrite.operation.title)]),
-        ),
-        leading: _openedFeature == null || pendingWrite != null
-            ? null
-            : IconButton(
-                tooltip: context.tr('返回'),
-                onPressed: _navigateBack,
-                icon: const Icon(Icons.arrow_back),
-              ),
-        actions: <Widget>[
-          if (_openedFeature == null && _selectedIndex == 0)
-            IconButton(
-              tooltip: context.tr('刷新'),
-              onPressed: () => widget.onRefresh(),
-              icon: const Icon(Icons.refresh),
-            ),
-        ],
-      ),
-      drawer: wide ? null : _buildDrawer(context),
-      body: wide
-          ? Row(
-              children: <Widget>[
-                _buildRail(context),
-                const VerticalDivider(width: 1),
-                Expanded(child: body),
-              ],
-            )
-          : body,
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _selectTab,
-              destinations: _tabs
-                  .map(
-                    (tab) => NavigationDestination(
-                      key: ValueKey<String>('tab-${tab.label}'),
-                      icon: Icon(tab.icon),
-                      selectedIcon: Icon(tab.selectedIcon),
-                      label: context.tr(tab.label),
-                    ),
+    return PopScope<Object?>(
+      canPop: _openedFeature == null && pendingWrite == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (pendingWrite != null) {
+          if (!widget.writeState.isSubmitting &&
+              !widget.writeState.isDiscarding) {
+            unawaited(_cancelWrite());
+          }
+        } else if (_openedFeature != null) {
+          _navigateBack();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            pendingWrite == null
+                ? context.tr(
+                    _openedSubpage?.title ??
+                        _openedFeature?.title ??
+                        _tabs[_selectedIndex].label,
                   )
-                  .toList(),
-            ),
+                : context.tr("确认{0}", [
+                    context.tr(pendingWrite.operation.title),
+                  ]),
+          ),
+          leading: _openedFeature == null || pendingWrite != null
+              ? null
+              : IconButton(
+                  tooltip: context.tr('返回'),
+                  onPressed: _navigateBack,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+          actions: <Widget>[
+            if (_openedFeature == null && _selectedIndex == 0)
+              IconButton(
+                tooltip: context.tr('刷新'),
+                onPressed: () => widget.onRefresh(),
+                icon: const Icon(Icons.refresh),
+              ),
+          ],
+        ),
+        drawer: wide ? null : _buildDrawer(context),
+        body: wide
+            ? Row(
+                children: <Widget>[
+                  _buildRail(context),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: body),
+                ],
+              )
+            : body,
+        bottomNavigationBar: wide
+            ? null
+            : NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _selectTab,
+                destinations: _tabs
+                    .map(
+                      (tab) => NavigationDestination(
+                        key: ValueKey<String>('tab-${tab.label}'),
+                        icon: Icon(tab.icon),
+                        selectedIcon: Icon(tab.selectedIcon),
+                        label: context.tr(tab.label),
+                      ),
+                    )
+                    .toList(),
+              ),
+      ),
     );
   }
 
@@ -325,6 +350,7 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
       routePolicy: widget.routePolicy,
       telemetryEnabled: widget.telemetryEnabled,
       onRoutePolicyChanged: widget.onRoutePolicyChanged,
+      changingRoute: widget.changingRoute,
       onTelemetryChanged: widget.onTelemetryChanged,
       onLogout: widget.onLogout,
       onLogoutAndClearAccount: widget.onLogoutAndClearAccount,
@@ -400,10 +426,22 @@ class _UbaaMainShellState extends State<UbaaMainShell> {
     });
   }
 
-  void _openFeature(FeatureId feature) => setState(() {
-    _openedFeature = feature;
-    _openedSubpage = null;
-  });
+  void _openFeature(FeatureId feature) {
+    setState(() {
+      _openedFeature = feature;
+      _openedSubpage = null;
+    });
+    if (widget.snapshots[feature]?.status == FeatureLoadStatus.idle) {
+      unawaited(
+        feature == FeatureId.signin && widget.onFeatureQuery != null
+            ? widget.onFeatureQuery!(
+                feature,
+                FeatureQuery(date: widget.currentTime),
+              )
+            : widget.onRetryFeature(feature),
+      );
+    }
+  }
 
   void _navigateBack() => setState(() {
     if (_openedSubpage == _FeatureSubpage.bykcCourseDetail) {

@@ -160,9 +160,15 @@ FeatureResult _countResult(
   List<FeatureDetail> details = const <FeatureDetail>[],
   FeaturePagination? pagination,
   ConnectionMode? resolvedRoute,
+  String? savedAt,
 }) => count == 0
-    ? FeatureResult.empty(resolvedRoute: resolvedRoute, pagination: pagination)
+    ? FeatureResult.empty(
+        resolvedRoute: resolvedRoute,
+        pagination: pagination,
+        savedAt: DateTime.tryParse(savedAt ?? ''),
+      )
     : FeatureResult.success(
+        savedAt: DateTime.tryParse(savedAt ?? ''),
         summary: '$count$unit',
         details: details,
         pagination: pagination,

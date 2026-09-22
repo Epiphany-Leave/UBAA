@@ -112,6 +112,8 @@ class AppController extends ChangeNotifier {
   YgdkReadbackState _ygdkReadbackState = const YgdkReadbackState.empty();
   List<ConnectionMode> _activeRoutes = const <ConnectionMode>[];
   bool _rebuildingBackend = false;
+  bool _changingRoute = false;
+  bool get changingRoute => _changingRoute;
 
   /// Expando 按实例身份关联释放 Future，且不会因去重表阻止已释放
   /// backend 被回收。
@@ -178,7 +180,7 @@ class AppController extends ChangeNotifier {
         if (_user != null) {
           _setPhase(AppPhase.home);
           await _recordAppOpen();
-          unawaited(refreshHome());
+          unawaited(refreshHome(refresh: false));
           return;
         }
       }
@@ -324,18 +326,21 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> setRoutePolicy(RoutePolicy value) async {
-    if (_disposed || _phase == AppPhase.loggingIn) return;
+    if (_disposed || _phase == AppPhase.loggingIn || _writeTransitions != 0)
+      return;
     final previousPolicy = _loginForm.routePolicy;
     if (previousPolicy == value) return;
+    _changingRoute = true;
     _beginWriteTransition();
+    final transitionEpoch = _lifecycleEpoch;
     _clearError();
     try {
       await _backend.prepareLogin(value);
-      if (_disposed) return;
+      if (_disposed || transitionEpoch != _lifecycleEpoch) return;
       BackendRouteSettings? settings;
       if (_backend case final RouteSettingsBackend routeBackend) {
         settings = await routeBackend.routeSettings();
-        if (_disposed) return;
+        if (_disposed || transitionEpoch != _lifecycleEpoch) return;
       }
       if (settings case final routeSettings?) {
         _applyRouteSettings(routeSettings);
@@ -352,7 +357,7 @@ class AppController extends ChangeNotifier {
         _setPhase(AppPhase.login);
       }
     } on BackendException catch (exception, stackTrace) {
-      if (_disposed) return;
+      if (_disposed || transitionEpoch != _lifecycleEpoch) return;
       _loginForm = _loginForm.copyWith(routePolicy: previousPolicy);
       _error = _recordFailure(
         exception,
@@ -360,7 +365,7 @@ class AppController extends ChangeNotifier {
         stackTrace: stackTrace,
       );
     } catch (error, stackTrace) {
-      if (_disposed) return;
+      if (_disposed || transitionEpoch != _lifecycleEpoch) return;
       _loginForm = _loginForm.copyWith(routePolicy: previousPolicy);
       _error = _recordFailure(
         error,
@@ -368,6 +373,7 @@ class AppController extends ChangeNotifier {
         stackTrace: stackTrace,
       );
     } finally {
+      _changingRoute = false;
       _endWriteTransition();
     }
     _notify();
@@ -418,7 +424,7 @@ class AppController extends ChangeNotifier {
       if (_disposed) return;
       _setPhase(AppPhase.home);
       await _recordAppOpen();
-      unawaited(refreshHome());
+      unawaited(refreshHome(refresh: false));
     } on BackendException catch (exception, stackTrace) {
       if (exception.code == UbaaErrorCode.invalidCredentials) {
         await _credentialVault.clear();
@@ -443,8 +449,8 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> refreshHome({Iterable<FeatureId>? only}) =>
-      _refreshHome(only: only);
+  Future<void> refreshHome({Iterable<FeatureId>? only, bool refresh = true}) =>
+      _refreshHome(only: only, refresh: refresh);
 
   Future<void> retryFeature(FeatureId feature) =>
       refreshHome(only: <FeatureId>[feature]);

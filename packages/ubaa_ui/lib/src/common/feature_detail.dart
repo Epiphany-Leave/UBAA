@@ -7,6 +7,7 @@ class _FeatureDetailView extends StatelessWidget {
     required this.subpage,
     required this.onSubpageChanged,
     this.query,
+    this.timetable,
     required this.onRetry,
     this.onBykcWrite,
     this.boyaCalendar,
@@ -19,6 +20,8 @@ class _FeatureDetailView extends StatelessWidget {
     this.onEvaluationWrite,
     this.onYgdkSubmitWrite,
     this.onPickYgdkPhoto,
+    this.onLoadYgdkReminder,
+    this.onSaveYgdkReminder,
     this.onQuery,
   });
 
@@ -27,6 +30,7 @@ class _FeatureDetailView extends StatelessWidget {
   final _FeatureSubpage? subpage;
   final ValueChanged<_FeatureSubpage?> onSubpageChanged;
   final FeatureQuery? query;
+  final Timetable? timetable;
   final Future<void> Function() onRetry;
   final Future<void> Function(WriteOperation operation, int courseId)?
   onBykcWrite;
@@ -40,6 +44,8 @@ class _FeatureDetailView extends StatelessWidget {
   final EvaluationSubmitStarter? onEvaluationWrite;
   final YgdkSubmitStarter? onYgdkSubmitWrite;
   final YgdkPhotoPicker? onPickYgdkPhoto;
+  final Future<bool> Function()? onLoadYgdkReminder;
+  final Future<void> Function(bool)? onSaveYgdkReminder;
   final Future<void> Function(FeatureQuery query)? onQuery;
 
   @override
@@ -94,7 +100,11 @@ class _FeatureDetailView extends StatelessWidget {
           child: CircularProgressIndicator(),
         ),
         FeatureLoadStatus.failure => _error(context),
-        FeatureLoadStatus.stale => _stale(context, details),
+        // A failed day switch must never offer the previous day's signing target.
+        FeatureLoadStatus.stale =>
+          feature == FeatureId.signin
+              ? _error(context)
+              : _stale(context, details),
         FeatureLoadStatus.empty => _empty(context),
         FeatureLoadStatus.idle => _empty(context),
         FeatureLoadStatus.success => _details(context, details),
@@ -102,22 +112,80 @@ class _FeatureDetailView extends StatelessWidget {
       return Stack(
         children: <Widget>[
           Positioned.fill(
-            child: feature == FeatureId.ygdk && onQuery != null
+            child: feature == FeatureId.ygdk
+                ? _YgdkPage(
+                    snapshot: snapshot,
+                    query: query,
+                    onQuery: onQuery,
+                    onSubmit: onYgdkSubmitWrite,
+                    onPickPhoto: onPickYgdkPhoto,
+                    loadReminder: onLoadYgdkReminder,
+                    saveReminder: onSaveYgdkReminder,
+                    child: content,
+                  )
+                : feature == FeatureId.signin && onQuery != null
                 ? Column(
                     children: [
-                      _YgdkHeader(snapshot: snapshot, onQuery: onQuery!),
+                      _SigninDateHeader(
+                        snapshot: snapshot,
+                        timetable: timetable,
+                        query: query ?? const FeatureQuery(),
+                        onQuery: onQuery!,
+                        busy: snapshot.status == FeatureLoadStatus.loading,
+                      ),
+                      Expanded(child: content),
+                    ],
+                  )
+                : const {
+                    FeatureId.grades,
+                    FeatureId.exam,
+                    FeatureId.spoc,
+                    FeatureId.judge,
+                  }.contains(feature)
+                ? Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 64, 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                snapshot.updatedAt == null
+                                    ? '首次加载后保存，之后可手动刷新'
+                                    : '数据时间：${snapshot.updatedAt!.toLocal().toString().split('.').first}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: '刷新本地数据',
+                              onPressed:
+                                  snapshot.status == FeatureLoadStatus.loading
+                                  ? null
+                                  : () => onRetry(),
+                              icon: const Icon(Icons.refresh),
+                            ),
+                          ],
+                        ),
+                      ),
                       Expanded(child: content),
                     ],
                   )
                 : content,
           ),
-          if (onQuery != null && _supportsQuery)
+          if (onQuery != null &&
+              _supportsQuery &&
+              feature != FeatureId.signin &&
+              feature != FeatureId.ygdk)
             Positioned.fill(
               child: _FeatureQueryControls(
                 feature: feature,
                 details: snapshot.details,
                 scheduleNavigation: snapshot.scheduleNavigation,
-                onApply: onQuery!,
+                onApply: (value) => onQuery!(
+                  feature == FeatureId.signin
+                      ? value.copyWith(date: query?.date)
+                      : value,
+                ),
               ),
             ),
         ],
@@ -179,8 +247,6 @@ class _FeatureDetailView extends StatelessWidget {
       onLibbookCancelWrite: onLibbookCancelWrite,
       onCgyySubmitWrite: onCgyySubmitWrite,
       onEvaluationWrite: onEvaluationWrite,
-      onYgdkSubmitWrite: onYgdkSubmitWrite,
-      onPickYgdkPhoto: onPickYgdkPhoto,
     );
   }
 

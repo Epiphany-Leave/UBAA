@@ -568,6 +568,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BridgeRoutedSigninWeek dco_decode_bridge_routed_signin_week(dynamic raw);
+
+  @protected
   BridgeRoutedSpocAssignmentDetail
   dco_decode_bridge_routed_spoc_assignment_detail(dynamic raw);
 
@@ -613,6 +616,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BridgeSigninClass dco_decode_bridge_signin_class(dynamic raw);
+
+  @protected
+  BridgeSigninDay dco_decode_bridge_signin_day(dynamic raw);
 
   @protected
   BridgeSigninPerformRequest dco_decode_bridge_signin_perform_request(
@@ -831,6 +837,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<BridgeSigninClass> dco_decode_list_bridge_signin_class(dynamic raw);
+
+  @protected
+  List<BridgeSigninDay> dco_decode_list_bridge_signin_day(dynamic raw);
 
   @protected
   List<BridgeSpocAssignmentSummary>
@@ -1654,6 +1663,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BridgeRoutedSigninWeek sse_decode_bridge_routed_signin_week(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   BridgeRoutedSpocAssignmentDetail
   sse_decode_bridge_routed_spoc_assignment_detail(SseDeserializer deserializer);
 
@@ -1719,6 +1733,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BridgeSigninClass sse_decode_bridge_signin_class(
     SseDeserializer deserializer,
   );
+
+  @protected
+  BridgeSigninDay sse_decode_bridge_signin_day(SseDeserializer deserializer);
 
   @protected
   BridgeSigninPerformRequest sse_decode_bridge_signin_perform_request(
@@ -1991,6 +2008,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<BridgeSigninClass> sse_decode_list_bridge_signin_class(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BridgeSigninDay> sse_decode_list_bridge_signin_day(
     SseDeserializer deserializer,
   );
 
@@ -2966,6 +2988,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_bridge_routed_signin_week(
+    BridgeRoutedSigninWeek self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bridge_routed_spoc_assignment_detail(
     BridgeRoutedSpocAssignmentDetail self,
     SseSerializer serializer,
@@ -3046,6 +3074,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_bridge_signin_class(
     BridgeSigninClass self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bridge_signin_day(
+    BridgeSigninDay self,
     SseSerializer serializer,
   );
 
@@ -3388,6 +3422,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_bridge_signin_class(
     List<BridgeSigninClass> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_bridge_signin_day(
+    List<BridgeSigninDay> self,
     SseSerializer serializer,
   );
 

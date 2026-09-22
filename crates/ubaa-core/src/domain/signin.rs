@@ -2,10 +2,21 @@ use serde::{Deserialize, Serialize};
 
 use super::ActionEligibility;
 
+/// Parsed day in a weekly display snapshot. Writes must re-fetch current authority.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SigninDay {
+    pub date: String,
+    pub is_future: bool,
+    pub classes: Vec<SigninClass>,
+}
+
 /// 一条 iClass 课堂签到状态。
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SigninClass {
+    /// Reason the time window or upstream authority prevents signing in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub availability_message: Option<String>,
     /// 上游课程安排标识。
     pub course_id: String,
     /// 课程显示名称。

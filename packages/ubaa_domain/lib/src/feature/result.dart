@@ -8,6 +8,16 @@ import 'catalog.dart';
 
 enum FeatureLoadStatus { idle, loading, success, empty, stale, failure }
 
+enum SigninDisplayStatus { pending, signed, late, unknown }
+
+/// Unfiltered presentation of one queried day; never grants write permission.
+@immutable
+class SigninDaySummary {
+  const SigninDaySummary({required this.date, required this.courses});
+  final DateTime date;
+  final List<SigninDisplayStatus> courses;
+}
+
 @immutable
 class FeatureSnapshot {
   const FeatureSnapshot({
@@ -21,6 +31,7 @@ class FeatureSnapshot {
     this.updatedAt,
     this.scheduleNavigation,
     this.timetable,
+    this.signinDays = const [],
   });
 
   final FeatureId feature;
@@ -37,6 +48,7 @@ class FeatureSnapshot {
   final DateTime? updatedAt;
   final ScheduleNavigation? scheduleNavigation;
   final Timetable? timetable;
+  final List<SigninDaySummary> signinDays;
 
   FeatureSnapshot copyWith({
     FeatureLoadStatus? status,
@@ -54,6 +66,7 @@ class FeatureSnapshot {
     ScheduleNavigation? scheduleNavigation,
     Timetable? timetable,
     bool clearTimetable = false,
+    List<SigninDaySummary>? signinDays,
   }) => FeatureSnapshot(
     feature: feature,
     status: status ?? this.status,
@@ -67,6 +80,7 @@ class FeatureSnapshot {
     updatedAt: updatedAt ?? this.updatedAt,
     scheduleNavigation: scheduleNavigation ?? this.scheduleNavigation,
     timetable: clearTimetable ? null : (timetable ?? this.timetable),
+    signinDays: signinDays ?? this.signinDays,
   );
 }
 
@@ -98,6 +112,8 @@ class FeaturePagination {
 @immutable
 class FeatureResult {
   const FeatureResult.success({
+    this.signinDays = const [],
+    this.savedAt,
     this.summary,
     this.details = const <FeatureDetail>[],
     this.resolvedRoute,
@@ -108,6 +124,8 @@ class FeatureResult {
        error = null;
 
   const FeatureResult.empty({
+    this.signinDays = const [],
+    this.savedAt,
     this.resolvedRoute,
     this.pagination,
     this.scheduleNavigation,
@@ -118,7 +136,9 @@ class FeatureResult {
        error = null;
 
   const FeatureResult.failure(this.error)
-    : summary = null,
+    : signinDays = const [],
+      savedAt = null,
+      summary = null,
       details = const <FeatureDetail>[],
       resolvedRoute = null,
       pagination = null,
@@ -126,6 +146,8 @@ class FeatureResult {
       timetable = null,
       isEmpty = false;
 
+  final DateTime? savedAt;
+  final List<SigninDaySummary> signinDays;
   final String? summary;
   final List<FeatureDetail> details;
 

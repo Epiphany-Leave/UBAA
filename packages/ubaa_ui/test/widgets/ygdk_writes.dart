@@ -1,6 +1,132 @@
 part of '../widgets_test.dart';
 
 void _registerYgdkWriteResultTests() {
+  testWidgets('阳光打卡历史页保留唯一底部入口，选择项目后只准备该目标', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const running = FeatureDetail(
+      title: '跑步',
+      actions: [
+        YgdkSubmitAction(
+          classifyId: 31,
+          itemId: 7,
+          eligibility: ActionEligibility.allowed,
+        ),
+      ],
+    );
+    const walking = FeatureDetail(
+      title: '健步走',
+      actions: [
+        YgdkSubmitAction(
+          classifyId: 31,
+          itemId: 8,
+          eligibility: ActionEligibility.allowed,
+        ),
+      ],
+    );
+    var snapshot = const FeatureSnapshot(
+      feature: FeatureId.ygdk,
+      status: FeatureLoadStatus.success,
+      details: [running, walking],
+    );
+    YgdkSubmitInput? prepared;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, update) => coordinatedShell(
+            user: const UserSummary(username: 'fixture'),
+            snapshots: {..._ygdkSnapshots(), FeatureId.ygdk: snapshot},
+            routePolicy: RoutePolicy.auto,
+            telemetryEnabled: false,
+            onRefresh: () async {},
+            onRetryFeature: (_) async {},
+            onFeatureQuery: (_, query) async => update(() {
+              snapshot = FeatureSnapshot(
+                feature: FeatureId.ygdk,
+                status: FeatureLoadStatus.success,
+                details: query.view == FeatureQueryView.summary
+                    ? [running, walking]
+                    : List.generate(
+                        30,
+                        (i) => FeatureDetail(
+                          title: '历史记录 $i',
+                          fields: [FeatureField(label: '记录编号', value: '$i')],
+                        ),
+                      ),
+              );
+            }),
+            onPrepareYgdkSubmitWrite: (input) async {
+              prepared = input;
+              return _validYgdkIntent();
+            },
+            onPickYgdkPhoto: _validYgdkPhoto,
+            onCommitWrite: (_) async => throw StateError('不得提交'),
+            onDiscardWriteIntent: (_) async {},
+            onRefreshYgdkAfterWrite: ({required expectedRoute}) async {},
+            onLogout: () async {},
+            onLogoutAndClearAccount: () async {},
+            onRoutePolicyChanged: (_) {},
+            onTelemetryChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+    await _openYgdkDetails(tester);
+    expect(find.text('去打卡'), findsOneWidget);
+    final bottom = tester.getCenter(find.text('去打卡'));
+    await tester.tap(find.text('历史记录'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(find.text('去打卡')), bottom);
+    await tester.tap(find.text('去打卡'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('继续确认'));
+    await tester.pumpAndSettle();
+    expect(find.text('请填写完整时间并选择照片。'), findsOneWidget);
+    expect(prepared, isNull);
+    // Re-entering from the records snapshot must load authoritative projects.
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阳光打卡'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('去打卡'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<FeatureDetail>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('健步走').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, '开始时间'),
+      '2026-09-01 08:00',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '结束时间'),
+      '2026-09-01 09:00',
+    );
+    await tester.scrollUntilVisible(
+      find.text('选择照片'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(Dialog),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.text('选择照片'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('继续确认'));
+    await tester.pumpAndSettle();
+    expect(prepared?.action.itemId, 8);
+    expect(find.text('确认提交'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     '''阳光打卡缺少 prepare picker readback commit 或 discard
 任一能力时隐藏入口''',
@@ -79,7 +205,7 @@ void _registerYgdkWriteResultTests() {
         );
         await _openYgdkDetails(tester);
         expect(
-          find.text('准备阳光打卡'),
+          find.text('去打卡'),
           findsNothing,
           reason: '缺少 ${item.missing} 时必须 fail-closed',
         );
@@ -510,8 +636,18 @@ void _registerYgdkWriteResultTests() {
       findsNothing,
     );
 
-    await tester.tap(find.text('准备阳光打卡'));
+    await tester.tap(find.text('去打卡'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('选择照片'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(Dialog),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('选择照片'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('ygdk-photo-preview')),
@@ -605,7 +741,7 @@ Future<void> _openYgdkDetails(WidgetTester tester) async {
 
 Future<void> _openAndFillYgdkForm(WidgetTester tester) async {
   await _openYgdkDetails(tester);
-  await tester.tap(find.text('准备阳光打卡'));
+  await tester.tap(find.text('去打卡'));
   await tester.pumpAndSettle();
   await tester.enterText(
     find.widgetWithText(TextField, '开始时间'),
@@ -614,6 +750,13 @@ Future<void> _openAndFillYgdkForm(WidgetTester tester) async {
   await tester.enterText(
     find.widgetWithText(TextField, '结束时间'),
     '2026-09-01 09:00',
+  );
+  await tester.scrollUntilVisible(
+    find.text('选择照片'),
+    200,
+    scrollable: find
+        .descendant(of: find.byType(Dialog), matching: find.byType(Scrollable))
+        .first,
   );
   await tester.tap(find.text('选择照片'));
   await tester.pumpAndSettle();

@@ -1,6 +1,28 @@
 part of '../app_controller_test.dart';
 
 void _registerReadTests() {
+  test('冷启动只读缓存模块，手动刷新才请求更新', () async {
+    final backend = _RefreshMatrixBackend();
+    final controller = AppController(backend: backend);
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    expect(backend.loadedFeatures, [FeatureId.schedule]);
+    expect(backend.queries.map((call) => call.$1).toSet(), {
+      FeatureId.grades,
+      FeatureId.exam,
+      FeatureId.spoc,
+      FeatureId.judge,
+    });
+    expect(backend.queries.every((call) => !call.$2.refresh), isTrue);
+    expect(
+      controller.snapshots[FeatureId.signin]!.status,
+      FeatureLoadStatus.idle,
+    );
+    backend.queries.clear();
+    await controller.refreshHome(only: [FeatureId.grades]);
+    expect(backend.queries.single.$2.refresh, isTrue);
+  });
+
   test('成绩变化仅比较同学期课程，失败不覆盖基线，注销清理提示', () async {
     String? score;
     var term = '20261';
@@ -119,7 +141,7 @@ void _registerReadTests() {
     controller.dispose();
   });
 
-  test('明确空结果后刷新失败不伪造成 stale 旧数据', () async {
+  test('成功空快照后刷新失败保留空数据并标记 stale', () async {
     var loads = 0;
     final backend = _FlakyBackend(
       load: (_) async {
@@ -132,7 +154,7 @@ void _registerReadTests() {
     await controller.refreshHome(only: const <FeatureId>[FeatureId.schedule]);
     await controller.refreshHome(only: const <FeatureId>[FeatureId.schedule]);
     final snapshot = controller.snapshots[FeatureId.schedule]!;
-    expect(snapshot.status, FeatureLoadStatus.failure);
+    expect(snapshot.status, FeatureLoadStatus.stale);
     expect(snapshot.summary, isNull);
     expect(snapshot.details, isEmpty);
     expect(snapshot.error?.code, UbaaErrorCode.networkError);

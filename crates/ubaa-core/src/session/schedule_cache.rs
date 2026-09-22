@@ -24,6 +24,51 @@ const MAX_BYTES: u64 = 16 * 1024 * 1024;
 struct Cache {
     active: Option<String>,
     accounts: BTreeMap<String, SavedSchedule>,
+    #[serde(default)]
+    reads: BTreeMap<String, BTreeMap<String, ReadSnapshot>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct ReadSnapshot {
+    pub data: serde_json::Value,
+    pub resolution: crate::connection::RouteResolution,
+    pub saved_at: String,
+}
+
+pub(crate) fn active_owner(dir: &Path) -> Result<Option<String>> {
+    access(dir, false, |cache| Ok(cache.active.clone()))
+}
+
+pub(crate) fn read_snapshot(dir: &Path, owner: &str, key: &str) -> Result<Option<ReadSnapshot>> {
+    access(dir, false, |cache| {
+        if cache.active.as_deref() != Some(owner) {
+            return Ok(None);
+        }
+        Ok(cache
+            .reads
+            .get(owner)
+            .and_then(|reads| reads.get(key))
+            .cloned())
+    })
+}
+
+pub(crate) fn save_snapshot(
+    dir: &Path,
+    owner: &str,
+    key: &str,
+    snapshot: ReadSnapshot,
+) -> Result<()> {
+    access(dir, true, |cache| {
+        if cache.active.as_deref() != Some(owner) {
+            return Err(session_error("账号已切换，未保存数据"));
+        }
+        cache
+            .reads
+            .entry(owner.to_owned())
+            .or_default()
+            .insert(key.to_owned(), snapshot);
+        Ok(())
+    })
 }
 
 fn access<T>(

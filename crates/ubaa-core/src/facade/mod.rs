@@ -5,7 +5,9 @@ pub use calendar::{CalendarDraft, bykc_calendar_draft, calendar_overlaps};
 mod client;
 mod diagnostic;
 mod read;
+mod read_cache;
 mod routing;
+mod signin_date;
 #[cfg(feature = "test-contract")]
 #[doc(hidden)]
 pub mod testing;
@@ -15,7 +17,7 @@ mod write;
 pub use crate::domain::{SavedSchedule, SavedSemester};
 pub use client::UbaaClient;
 pub use diagnostic::RouteClient;
-pub use types::{CallerPinned, Routed, RoutedError, RoutedResult};
+pub use types::{CachedRead, CallerPinned, Routed, RoutedError, RoutedResult};
 
 // 逐项列出宿主稳定合同，避免新增领域实现时被通配重导出意外纳入公共 API。
 pub use crate::domain::{
@@ -38,7 +40,7 @@ pub use crate::domain::{
     LibBookCancelRequest, LibBookCancelResult, LibBookLibrary, LibBookReservePreflight,
     LibBookReserveRequest, LibBookReserveResult, LibBookSeat, LibBookStorey, LibBookTimeSlot,
     LoginInput, LoginOutcome, LoginReadiness, ReadonlyFeature, RouteLoginResult, RouteLoginState,
-    RoutePolicy, SafeError, SecretValue, SectionTime, SigninActionResult, SigninClass,
+    RoutePolicy, SafeError, SecretValue, SectionTime, SigninActionResult, SigninClass, SigninDay,
     SpocAssignmentDetail, SpocAssignmentSummary, SpocAssignments, SpocAssignmentsDiagnostics,
     SpocSubmissionStatus, Term, TodayClass, UserInfoResponse, UserProfile, Week, WeeklySchedule,
     YgdkClockinSubmitRequest, YgdkClockinSubmitResult, YgdkItem, YgdkOverview, YgdkPhotoUpload,

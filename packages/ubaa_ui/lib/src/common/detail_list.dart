@@ -17,8 +17,6 @@ class _FeatureDetailList extends StatefulWidget {
     this.onLibbookCancelWrite,
     this.onCgyySubmitWrite,
     this.onEvaluationWrite,
-    this.onYgdkSubmitWrite,
-    this.onPickYgdkPhoto,
   });
 
   final FeatureId feature;
@@ -36,8 +34,6 @@ class _FeatureDetailList extends StatefulWidget {
   final LibbookCancelStarter? onLibbookCancelWrite;
   final CgyyReservationStarter? onCgyySubmitWrite;
   final EvaluationSubmitStarter? onEvaluationWrite;
-  final YgdkSubmitStarter? onYgdkSubmitWrite;
-  final YgdkPhotoPicker? onPickYgdkPhoto;
 
   @override
   State<_FeatureDetailList> createState() => _FeatureDetailListState();
@@ -156,7 +152,6 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
                             .action<LibbookCancelAction>();
                         final cgyyReservation = _cgyyReserveAction(detail);
                         final evaluation = _evaluationSubmitTarget(detail);
-                        final ygdkAction = _ygdkAction(detail);
                         final canBykcSign =
                             bykcSignInAction?.eligibility ==
                             ActionEligibility.allowed;
@@ -260,11 +255,6 @@ class _FeatureDetailListState extends State<_FeatureDetailList> {
                                 ..._cgyyReserveWriteFields(
                                   context,
                                   cgyyReservation,
-                                ),
-                                ..._ygdkWriteFields(
-                                  context,
-                                  ygdkAction,
-                                  detail,
                                 ),
                               ],
                             ),

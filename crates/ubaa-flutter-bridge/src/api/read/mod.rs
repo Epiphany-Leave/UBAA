@@ -156,6 +156,7 @@ pub struct BridgeClassroomQuery {
 }
 #[derive(Clone, Debug)]
 pub struct BridgeSigninClass {
+    pub availability_message: Option<String>,
     pub course_id: String,
     pub course_name: String,
     pub class_begin_time: String,
@@ -163,6 +164,13 @@ pub struct BridgeSigninClass {
     pub sign_status: Option<i32>,
     pub signin_eligibility: BridgeActionEligibility,
     pub signin_target: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BridgeSigninDay {
+    pub date: String,
+    pub is_future: bool,
+    pub classes: Vec<BridgeSigninClass>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -698,6 +706,7 @@ routed!(BridgeRoutedExamArrangement, BridgeExamArrangement);
 routed!(BridgeRoutedGrades, BridgeGradeData);
 routed!(BridgeRoutedClassroomQuery, BridgeClassroomQuery);
 routed!(BridgeRoutedSigninClasses, Vec<BridgeSigninClass>);
+routed!(BridgeRoutedSigninWeek, Vec<BridgeSigninDay>);
 routed!(BridgeRoutedSpocAssignments, BridgeSpocAssignments);
 routed!(BridgeRoutedSpocAssignmentDetail, BridgeSpocAssignmentDetail);
 routed!(

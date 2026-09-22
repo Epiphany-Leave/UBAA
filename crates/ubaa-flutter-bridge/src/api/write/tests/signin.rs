@@ -33,7 +33,7 @@ async fn signin_prepare_reads_typed_authority_and_builds_safe_target_summary() {
         .expect("允许目标应签发意图");
 
     assert_eq!(intent.resolved_route, BridgeConnectionMode::Direct);
-    for expected in ["脱敏课堂", SCHEDULE_ID, "08:00", "09:40", "可签到"] {
+    for expected in ["脱敏课堂", SCHEDULE_ID, "00:00", "23:59:59", "可签到"] {
         assert!(
             intent.target_summary.contains(expected),
             "摘要缺少 {expected}"
@@ -98,7 +98,13 @@ async fn signin_prepare_sanitizes_each_untrusted_summary_field() {
     let direct = MockTransport::new([
         signin_entry_request(),
         signin_login_request(),
-        signin_today_request_with_fields(schedule_id, Some(0), "脱敏\n课堂", "08:00\r", "09:40\t"),
+        signin_today_request_with_fields(
+            schedule_id,
+            Some(0),
+            "脱敏\n课堂",
+            "00:00\r",
+            "23:59:59\t",
+        ),
     ]);
     let client = BridgeClient::open(root.to_string_lossy().into_owned()).expect("打开 bridge");
     install_core(
@@ -119,8 +125,8 @@ async fn signin_prepare_sanitizes_each_untrusted_summary_field() {
 
     assert!(intent.target_summary.contains("脱敏课堂"));
     assert!(intent.target_summary.contains("schedule-safecontinued"));
-    assert!(intent.target_summary.contains("08:00"));
-    assert!(intent.target_summary.contains("09:40"));
+    assert!(intent.target_summary.contains("00:00"));
+    assert!(intent.target_summary.contains("23:59:59"));
     assert!(!intent.target_summary.chars().any(char::is_control));
     direct.assert_exhausted().expect("prepare 只完成只读复核");
     client.dispose().await.expect("销毁 bridge");
@@ -288,7 +294,7 @@ fn signin_login_request() -> ExpectedRequest {
 }
 
 fn signin_today_request(schedule_id: &str, status: Option<i32>) -> ExpectedRequest {
-    signin_today_request_with_fields(schedule_id, status, "脱敏课堂", "08:00", "09:40")
+    signin_today_request_with_fields(schedule_id, status, "脱敏课堂", "00:00", "23:59:59")
 }
 
 fn signin_today_request_with_fields(
@@ -329,7 +335,7 @@ fn json_escape(value: &str) -> String {
 }
 
 fn signin_timestamp_request() -> ExpectedRequest {
-    let url = "https://iclass.buaa.edu.cn:8347/app/common/get_timestamp.action";
+    let url = "http://iclass.buaa.edu.cn:8081/app/common/get_timestamp.action";
     ExpectedRequest::new(
         HttpMethod::Get,
         url,
@@ -339,7 +345,7 @@ fn signin_timestamp_request() -> ExpectedRequest {
 
 fn signin_write_request(body: &'static str) -> ExpectedRequest {
     let url = format!(
-        "https://iclass.buaa.edu.cn:8347/eschool/app/course/stu_scan_sign.action?courseSchedId={SCHEDULE_ID}&timestamp=1700000000000"
+        "http://iclass.buaa.edu.cn:8081/eschool/app/course/stu_scan_sign.action?courseSchedId={SCHEDULE_ID}&timestamp=1700000000000"
     );
     ExpectedRequest::new(
         HttpMethod::Post,

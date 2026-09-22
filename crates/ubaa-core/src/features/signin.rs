@@ -8,6 +8,10 @@ use crate::domain::{ActionEligibility, SigninActionResult, SigninClass};
 use crate::error::{ErrorCode, ErrorKind, Result, UbaaError};
 use crate::ports::HttpRequest;
 
+#[path = "signin_time.rs"]
+mod time_window;
+pub(crate) use time_window::apply_window;
+
 const SIGNIN_ENTRY_URL: &str = "https://iclass.buaa.edu.cn:8346/?type=jumpMyCenter";
 const SIGNIN_LOGIN_URL: &str = "https://iclass.buaa.edu.cn:8346/eschool/app/user/login_buaa.do";
 const SIGNIN_TODAY_URL: &str =
@@ -63,14 +67,49 @@ pub fn parse_today(body: &str) -> Result<Vec<SigninClass>> {
             "签到响应返回了非成功状态",
         ));
     }
-    Ok(response.result.into_iter().map(map_row).collect())
+    let mut classes: Vec<SigninClass> = Vec::new();
+    for row in response.result.into_iter().map(map_row) {
+        if let Some(previous) = classes.iter_mut().find(|previous| {
+            !row.course_id.trim().is_empty() && previous.course_id == row.course_id
+        }) {
+            if previous.course_name != row.course_name
+                || previous.class_begin_time != row.class_begin_time
+                || previous.class_end_time != row.class_end_time
+                || previous.sign_status != row.sign_status
+            {
+                previous.sign_status = None;
+                previous.signin_eligibility = ActionEligibility::Unknown;
+                previous.signin_target = None;
+                previous.availability_message =
+                    Some("同一课程安排的时间或状态不一致，请刷新核对".into());
+            }
+        } else {
+            classes.push(row);
+        }
+    }
+    Ok(classes)
 }
 
 /// 使用当前路线查询今日课堂签到状态。
 pub(crate) async fn get_today(
     runtime: &mut crate::runtime::ClientRuntime,
 ) -> Result<Vec<SigninClass>> {
-    get_today_once(runtime, true).await
+    get_on_date(runtime, &shanghai_date()).await
+}
+
+pub(crate) async fn get_on_date(
+    runtime: &mut crate::runtime::ClientRuntime,
+    date: &str,
+) -> Result<Vec<SigninClass>> {
+    if chrono::NaiveDate::parse_from_str(date, "%Y%m%d").is_err() || date.len() != 8 {
+        return Err(UbaaError::new(
+            ErrorCode::InvalidInput,
+            ErrorKind::Input,
+            false,
+            "签到日期无效",
+        ));
+    }
+    get_today_once(runtime, date, true).await
 }
 
 /// 只读复核唯一课程安排及其当前签到资格。
@@ -79,11 +118,20 @@ pub(crate) async fn preflight_signin(
     course_id: &str,
 ) -> Result<SigninClass> {
     validate_course_id(course_id)?;
-    let matches = get_today(runtime)
+    let mut matches = get_today(runtime)
         .await?
         .into_iter()
         .filter(|class| class.signin_target.as_deref() == Some(course_id))
         .collect::<Vec<_>>();
+    for class in &mut matches {
+        apply_window(
+            class,
+            chrono::Utc::now()
+                .with_timezone(&chrono_tz::Asia::Shanghai)
+                .date_naive(),
+            chrono::Utc::now(),
+        );
+    }
     let [class] = matches.as_slice() else {
         return if matches.is_empty() {
             Err(unavailable("今日签到目标已变化，请刷新后重新准备"))
@@ -106,8 +154,7 @@ pub(crate) async fn perform_signin(
 ) -> Result<SigninActionResult> {
     preflight_signin(runtime, course_id).await?;
     let credential = current_credential(runtime).await?;
-    let timestamp_url =
-        runtime.url("https://iclass.buaa.edu.cn:8347/app/common/get_timestamp.action")?;
+    let timestamp_url = checkin_url(runtime, "app/common/get_timestamp.action")?;
     let timestamp = runtime.request(HttpRequest::get(timestamp_url)).await?;
     if timestamp.status != 200 {
         return Err(upstream_error("无法获取签到时间戳"));
@@ -126,9 +173,10 @@ fn build_signin_url(
     course_id: &str,
     timestamp: &str,
 ) -> Result<String> {
-    let mut url = url::Url::parse(
-        &runtime.url("https://iclass.buaa.edu.cn:8347/eschool/app/course/stu_scan_sign.action")?,
-    )
+    let mut url = url::Url::parse(&checkin_url(
+        runtime,
+        "eschool/app/course/stu_scan_sign.action",
+    )?)
     .map_err(|_| invalid_url())?;
     url.query_pairs_mut()
         .append_pair("courseSchedId", course_id)
@@ -139,6 +187,14 @@ fn build_signin_url(
 #[must_use]
 fn build_signin_form(user_id: &str) -> Vec<(&'static str, String)> {
     vec![("id", user_id.into())]
+}
+
+fn checkin_url(runtime: &crate::runtime::ClientRuntime, path: &str) -> Result<String> {
+    let base = match runtime.mode() {
+        crate::domain::ConnectionMode::Direct => "http://iclass.buaa.edu.cn:8081",
+        crate::domain::ConnectionMode::WebVpn => "https://iclass.buaa.edu.cn:8347",
+    };
+    runtime.url(&format!("{base}/{path}"))
 }
 
 async fn submit_signin(
@@ -243,6 +299,7 @@ fn build_today_request(
 
 async fn get_today_once(
     runtime: &mut crate::runtime::ClientRuntime,
+    date: &str,
     allow_retry: bool,
 ) -> Result<Vec<SigninClass>> {
     super::require_session(runtime)?;
@@ -251,7 +308,7 @@ async fn get_today_once(
         &runtime.url(SIGNIN_TODAY_URL)?,
         &credential.user_id,
         &credential.session_id,
-        &shanghai_date(),
+        date,
     )?;
     let response = runtime.request(request).await?;
     if response.status != 200 {
@@ -261,7 +318,7 @@ async fn get_today_once(
         Ok(classes) => Ok(classes),
         Err(error) if allow_retry && error.code == ErrorCode::UpstreamChanged => {
             runtime.feature_state().signin.clear_credential();
-            Box::pin(get_today_once(runtime, false)).await
+            Box::pin(get_today_once(runtime, date, false)).await
         }
         Err(error) => Err(error),
     }
@@ -467,6 +524,7 @@ fn map_row(row: Row) -> SigninClass {
         _ => ActionEligibility::Unknown,
     };
     SigninClass {
+        availability_message: None,
         course_id: row.id,
         course_name: row.course_name,
         class_begin_time: row.class_begin_time,

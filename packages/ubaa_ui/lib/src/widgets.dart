@@ -24,6 +24,7 @@ part 'features/academic.dart';
 part 'features/classroom.dart';
 part 'features/timetable.dart';
 part 'features/assignments.dart';
+part 'features/signin_date.dart';
 part 'features/bykc.dart';
 part 'features/bykc_cards.dart';
 part 'features/boya_calendar.dart';

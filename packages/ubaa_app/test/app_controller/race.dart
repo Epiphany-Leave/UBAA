@@ -1,6 +1,30 @@
 part of '../app_controller_test.dart';
 
 void _registerRaceTests() {
+  for (final fail in [false, true]) {
+    test('线路切换结束加载且丢弃旧签到结果 fail=$fail', () async {
+      final backend = _RouteDuringReadBackend(fail);
+      final controller = AppController(backend: backend);
+      final reading = controller.refreshHome(only: [FeatureId.signin]);
+      await backend.started(FeatureId.signin);
+      await controller.setRoutePolicy(RoutePolicy.webvpn);
+      expect(
+        controller.snapshots[FeatureId.signin]!.status,
+        FeatureLoadStatus.failure,
+      );
+      backend.complete(
+        FeatureId.signin,
+        const FeatureResult.success(summary: '旧线路'),
+      );
+      await reading;
+      expect(controller.snapshots[FeatureId.signin]!.summary, isNull);
+      expect(
+        controller.snapshots[FeatureId.signin]!.status,
+        FeatureLoadStatus.failure,
+      );
+      controller.dispose();
+    });
+  }
   for (final completionOrder in const <List<FeatureId>>[
     <FeatureId>[FeatureId.schedule, FeatureId.evaluation],
     <FeatureId>[FeatureId.evaluation, FeatureId.schedule],
@@ -86,6 +110,29 @@ void _registerRaceTests() {
     expect(controller.loginForm.routePolicy, RoutePolicy.auto);
   });
 
+  test('切换线路期间不排入新查询且完成后恢复入口', () async {
+    final backend = _DelayedRoutePolicyBackend();
+    final controller = AppController(backend: backend);
+    final changing = controller.setRoutePolicy(RoutePolicy.webvpn);
+    await backend.prepareStarted.future;
+    expect(controller.changingRoute, isTrue);
+    await controller.setRoutePolicy(RoutePolicy.direct);
+    await controller.refreshHome(only: [FeatureId.signin]);
+    expect(
+      controller.snapshots[FeatureId.signin]!.status,
+      FeatureLoadStatus.idle,
+    );
+    backend.releasePrepare.complete();
+    await changing;
+    expect(controller.changingRoute, isFalse);
+    await controller.refreshHome(only: [FeatureId.signin]);
+    expect(
+      controller.snapshots[FeatureId.signin]!.status,
+      FeatureLoadStatus.empty,
+    );
+    controller.dispose();
+  });
+
   test('controller 销毁后延迟注销不会回写登录状态', () async {
     final backend = _DelayedLogoutBackend();
     final controller = AppController(backend: backend);
@@ -159,5 +206,14 @@ class _IndependentFeatureBackend implements UbaaBackend {
     final started = _started[feature] ??= Completer<void>();
     if (!started.isCompleted) started.complete();
     return (_results[feature] ??= Completer<FeatureResult>()).future;
+  }
+}
+
+class _RouteDuringReadBackend extends _IndependentFeatureBackend {
+  _RouteDuringReadBackend(this.fail);
+  final bool fail;
+  @override
+  Future<void> prepareLogin(RoutePolicy policy) async {
+    if (fail) throw const BackendException(UbaaErrorCode.operationConflict);
   }
 }

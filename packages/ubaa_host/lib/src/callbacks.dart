@@ -161,6 +161,7 @@ extension _UbaaAppHostCallbacks on _UbaaAppHostState {
       snapshots: _controller.snapshots,
       routePolicy: _controller.loginForm.routePolicy,
       activeRoutes: _controller.activeRoutes,
+      changingRoute: _controller.changingRoute,
       onReadDiagnostics: _controller.exportDiagnostics,
       writeState: _controller.writeCoordinator.state,
       onLoadAppVersion: readInstalledAppVersion,

@@ -183,6 +183,7 @@ pub(super) fn map_signin_classes(values: Vec<domain::SigninClass>) -> Vec<Bridge
     values
         .into_iter()
         .map(|v| BridgeSigninClass {
+            availability_message: v.availability_message,
             course_id: v.course_id,
             course_name: v.course_name,
             class_begin_time: v.class_begin_time,

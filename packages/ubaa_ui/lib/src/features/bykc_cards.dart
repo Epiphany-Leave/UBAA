@@ -259,7 +259,11 @@ class _BykcStatisticsRow extends StatelessWidget {
                     size: 18,
                   ),
                   const SizedBox(width: 4),
-                  Text(qualified ? context.tr('达标') : context.tr('未达标')),
+                  Expanded(
+                    child: Text(
+                      qualified ? context.tr('达标') : context.tr('未达标'),
+                    ),
+                  ),
                 ],
               ),
             ),

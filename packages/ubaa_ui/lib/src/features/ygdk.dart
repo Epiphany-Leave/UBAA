@@ -11,12 +11,27 @@ class _YgdkHeader extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (snapshot.summary != null &&
-            snapshot.status != FeatureLoadStatus.failure)
-          Text(
-            snapshot.summary!,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                snapshot.status == FeatureLoadStatus.failure
+                    ? ''
+                    : snapshot.summary ?? '',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            SizedBox(
+              width: 60,
+              height: 56,
+              child: _FeatureQueryControls(
+                feature: FeatureId.ygdk,
+                details: snapshot.details,
+                onApply: onQuery,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -176,26 +191,130 @@ extension _YgdkQueryControls on _FeatureQueryControlsState {
   ];
 }
 
-extension _YgdkDetailActions on _FeatureDetailListState {
-  List<Widget> _ygdkWriteFields(
-    BuildContext context,
-    YgdkSubmitAction? ygdkAction,
-    FeatureDetail detail,
-  ) => <Widget>[
-    if (ygdkAction != null && widget.onYgdkSubmitWrite != null) ...<Widget>[
-      const SizedBox(height: 12),
-      OutlinedButton.icon(
-        onPressed: () =>
-            _showYgdkForm(context, action: ygdkAction, title: detail.title),
-        icon: const Icon(Icons.directions_run),
-        label: Text(context.tr('准备阳光打卡')),
-      ),
-    ],
-  ];
+class _YgdkPage extends StatefulWidget {
+  const _YgdkPage({
+    required this.snapshot,
+    required this.child,
+    this.query,
+    this.onQuery,
+    this.onSubmit,
+    this.onPickPhoto,
+    this.loadReminder,
+    this.saveReminder,
+  });
+  final FeatureSnapshot snapshot;
+  final FeatureQuery? query;
+  final Widget child;
+  final Future<void> Function(FeatureQuery)? onQuery;
+  final YgdkSubmitStarter? onSubmit;
+  final YgdkPhotoPicker? onPickPhoto;
+  final Future<bool> Function()? loadReminder;
+  final Future<void> Function(bool)? saveReminder;
 
-  YgdkSubmitAction? _ygdkAction(FeatureDetail detail) {
-    if (widget.feature != FeatureId.ygdk) return null;
-    final action = detail.action<YgdkSubmitAction>();
-    return action?.hasCanonicalTarget == true ? action : null;
+  @override
+  State<_YgdkPage> createState() => _YgdkPageState();
+}
+
+class _YgdkPageState extends State<_YgdkPage> {
+  List<FeatureDetail> _projects = const [];
+  bool _opening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rememberProjects();
   }
+
+  @override
+  void didUpdateWidget(covariant _YgdkPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _rememberProjects();
+  }
+
+  void _rememberProjects() {
+    if ((widget.query?.view ?? FeatureQueryView.summary) !=
+        FeatureQueryView.summary)
+      return;
+    if (widget.snapshot.status != FeatureLoadStatus.success &&
+        widget.snapshot.status != FeatureLoadStatus.empty)
+      return;
+    _projects = widget.snapshot.details
+        .where(
+          (detail) =>
+              detail.action<YgdkSubmitAction>()?.hasCanonicalTarget == true,
+        )
+        .toList();
+  }
+
+  Future<void> _openForm() async {
+    setState(() => _opening = true);
+    try {
+      if (_projects.isEmpty && widget.onQuery != null) {
+        await widget.onQuery!(const FeatureQuery());
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+      }
+      if (_projects.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('暂无可提交的打卡项目，请刷新概览后重试。'))),
+        );
+        return;
+      }
+      final input = await showDialog<YgdkSubmitInput>(
+        context: context,
+        builder: (_) => _YgdkFormDialog(
+          projects: List.unmodifiable(_projects),
+          onPickPhoto: widget.onPickPhoto,
+        ),
+      );
+      if (input != null && mounted) await widget.onSubmit?.call(input);
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.tr('暂时无法打开打卡，请重试。'))));
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      if (widget.onQuery != null)
+        _YgdkHeader(snapshot: widget.snapshot, onQuery: widget.onQuery!),
+      if (widget.loadReminder != null && widget.saveReminder != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: _YgdkHomeReminder(
+            settings: true,
+            load: widget.loadReminder!,
+            save: widget.saveReminder!,
+          ),
+        ),
+      Expanded(child: widget.child),
+      if (widget.onSubmit != null &&
+          (_projects.isNotEmpty || widget.onQuery != null))
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
+                onPressed:
+                    _opening ||
+                        widget.snapshot.status == FeatureLoadStatus.loading
+                    ? null
+                    : _openForm,
+                icon: const Icon(Icons.add),
+                label: Text(context.tr('去打卡')),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 }

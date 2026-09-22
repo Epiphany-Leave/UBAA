@@ -1,5 +1,16 @@
 // Application-owned messages only; never translate school or personal data.
 const englishMessages = <String, String>{
+  '正在切换连接，请稍候…': 'Switching connection, please wait…',
+  '查询已中断': 'Query interrupted',
+  '连接或账号状态已变化，请重试。': 'The connection or account changed. Please retry.',
+  '去打卡': 'Check in',
+  '运动项目': 'Activity',
+  '照片': 'Photo',
+  '选择开始时间': 'Choose start time',
+  '选择结束时间': 'Choose end time',
+  '暂无可提交的打卡项目，请刷新概览后重试。':
+      'No eligible activities. Refresh the overview and try again.',
+  '暂时无法打开打卡，请重试。': 'Unable to open check-in. Please try again.',
   'GPA 计入学分': 'Credits counted toward GPA',
   '加权均分': 'Weighted average',
   '可用': 'Available',

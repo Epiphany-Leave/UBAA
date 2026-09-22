@@ -54,6 +54,7 @@ void _registerFeatureRenderingTests() {
     await tester.tap(find.byIcon(Icons.person_outline));
     await tester.pumpAndSettle();
     expect(find.text('直连'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('退出并清除本机账号'), 200);
     await tester.tap(find.text('退出并清除本机账号'));
     await tester.pumpAndSettle();
     expect(find.text('清除本机账号？'), findsOneWidget);
@@ -314,7 +315,8 @@ void _registerFeatureInputTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('阳光打卡'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('准备阳光打卡'));
+    expect(find.text('去打卡'), findsOneWidget);
+    await tester.tap(find.text('去打卡'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, '开始时间'),
@@ -323,6 +325,16 @@ void _registerFeatureInputTests() {
     await tester.enterText(
       find.widgetWithText(TextField, '结束时间'),
       '2026-09-01 09:00',
+    );
+    await tester.scrollUntilVisible(
+      find.text('选择照片'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(Dialog),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.tap(find.text('选择照片'));
     await tester.pumpAndSettle();
@@ -409,7 +421,7 @@ void _registerFeatureInputTests() {
     await tester.tap(find.text('阳光打卡'));
     await tester.pumpAndSettle();
 
-    expect(find.text('准备阳光打卡'), findsNothing);
+    expect(find.text('去打卡'), findsNothing);
     expect(prepareCalls, 0);
   });
 

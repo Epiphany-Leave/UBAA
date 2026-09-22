@@ -37,6 +37,124 @@ use crate::api::client::{
 };
 
 impl BridgeClient {
+    pub async fn signin_week(
+        &self,
+        date: String,
+        refresh: bool,
+    ) -> Result<super::BridgeRoutedSigninWeek, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |client| Box::pin(async move { client.signin_week(&date, refresh).await }),
+                |days| {
+                    days.into_iter()
+                        .map(|day| super::BridgeSigninDay {
+                            date: day.date,
+                            is_future: day.is_future,
+                            classes: map_signin_classes(day.classes),
+                        })
+                        .collect()
+                },
+            )
+            .await?;
+        Ok(super::BridgeRoutedSigninWeek { data, route })
+    }
+    pub async fn signin_on(&self, date: String) -> Result<BridgeRoutedSigninClasses, BridgeError> {
+        let (data, route) = self
+            .execute_read(
+                move |client| Box::pin(async move { client.signin_on(&date).await }),
+                map_signin_classes,
+            )
+            .await?;
+        Ok(BridgeRoutedSigninClasses { data, route })
+    }
+    pub async fn cached_grade_overview(
+        &self,
+        refresh: bool,
+    ) -> Result<super::BridgeRoutedGradeOverview, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_grade_overview(refresh).await }),
+                super::mappers::map_grade_overview,
+            )
+            .await?;
+        Ok(super::BridgeRoutedGradeOverview { data, route })
+    }
+    pub async fn cached_grades(
+        &self,
+        term: String,
+        refresh: bool,
+    ) -> Result<BridgeRoutedGrades, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_grades(&term, refresh).await }),
+                map_grade_data,
+            )
+            .await?;
+        Ok(BridgeRoutedGrades { data, route })
+    }
+    pub async fn cached_exam_terms(&self, refresh: bool) -> Result<BridgeRoutedTerms, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_exam_terms(refresh).await }),
+                map_terms,
+            )
+            .await?;
+        Ok(BridgeRoutedTerms { data, route })
+    }
+    pub async fn cached_schedule_terms(
+        &self,
+        refresh: bool,
+    ) -> Result<BridgeRoutedTerms, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_schedule_terms(refresh).await }),
+                map_terms,
+            )
+            .await?;
+        Ok(BridgeRoutedTerms { data, route })
+    }
+    pub async fn cached_exam_arrangement(
+        &self,
+        term: String,
+        refresh: bool,
+    ) -> Result<BridgeRoutedExamArrangement, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_exam_arrangement(&term, refresh).await }),
+                map_exam_arrangement,
+            )
+            .await?;
+        Ok(BridgeRoutedExamArrangement { data, route })
+    }
+    pub async fn cached_spoc_assignments(
+        &self,
+        refresh: bool,
+    ) -> Result<BridgeRoutedSpocAssignments, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| Box::pin(async move { c.cached_spoc_assignments(refresh).await }),
+                map_spoc_assignments,
+            )
+            .await?;
+        Ok(BridgeRoutedSpocAssignments { data, route })
+    }
+    pub async fn cached_judge_assignments(
+        &self,
+        include_expired: bool,
+        refresh: bool,
+    ) -> Result<BridgeRoutedJudgeSummaries, BridgeError> {
+        let (data, route) = self
+            .execute_cached_read(
+                move |c| {
+                    Box::pin(
+                        async move { c.cached_judge_assignments(include_expired, refresh).await },
+                    )
+                },
+                map_judge_summaries,
+            )
+            .await?;
+        Ok(BridgeRoutedJudgeSummaries { data, route })
+    }
     pub async fn saved_schedule(&self) -> Result<super::BridgeSavedSchedule, BridgeError> {
         catch_panic(async {
             let guard = self.inner.lock().await;
@@ -98,7 +216,34 @@ impl BridgeClient {
             let mut guard = self.inner.lock().await;
             let client = guard.as_mut().ok_or_else(disposed_error)?;
             let routed = call(client).await.map_err(BridgeError::from_routed)?;
-            Ok((mapper(routed.data), map_route(routed.resolution)))
+            let route = map_route(routed.resolution);
+            Ok((mapper(routed.data), route))
+        })
+        .await
+    }
+
+    async fn execute_cached_read<T, O, F>(
+        &self,
+        call: F,
+        mapper: fn(T) -> O,
+    ) -> Result<(O, BridgeRouteDecision), BridgeError>
+    where
+        F: for<'a> FnOnce(
+            &'a mut UbaaClient,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = Result<domain::CachedRead<T>, domain::RoutedError>> + Send + 'a,
+            >,
+        >,
+    {
+        catch_panic(async {
+            let mut guard = self.inner.lock().await;
+            let client = guard.as_mut().ok_or_else(disposed_error)?;
+            let cached = call(client).await.map_err(BridgeError::from_routed)?;
+            let mut route = map_route(cached.result.resolution);
+            route.saved_at = cached.saved_at;
+            route.from_cache = Some(cached.from_cache);
+            Ok((mapper(cached.result.data), route))
         })
         .await
     }

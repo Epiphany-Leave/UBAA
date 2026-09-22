@@ -86,6 +86,7 @@ class FeatureQuery {
     this.judgeKeys = const <JudgeAssignmentQueryKey>[],
     this.includeExpired = false,
     this.updateSchedule = false,
+    this.refresh = false,
   });
 
   final String? term;
@@ -121,6 +122,7 @@ class FeatureQuery {
   final List<JudgeAssignmentQueryKey> judgeKeys;
   final bool includeExpired;
   final bool updateSchedule;
+  final bool refresh;
 
   FeatureQuery copyWith({
     String? term,
@@ -145,6 +147,7 @@ class FeatureQuery {
     List<JudgeAssignmentQueryKey>? judgeKeys,
     bool? includeExpired,
     bool? updateSchedule,
+    bool? refresh,
   }) => FeatureQuery(
     term: term ?? this.term,
     date: date ?? this.date,
@@ -168,5 +171,6 @@ class FeatureQuery {
     judgeKeys: judgeKeys ?? this.judgeKeys,
     includeExpired: includeExpired ?? this.includeExpired,
     updateSchedule: updateSchedule ?? this.updateSchedule,
+    refresh: refresh ?? this.refresh,
   );
 }

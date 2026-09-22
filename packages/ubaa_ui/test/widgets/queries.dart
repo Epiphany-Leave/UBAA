@@ -47,11 +47,9 @@ void _registerQueryTests() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('筛选'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('全部课程'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('未签到'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('查询'));
+    await tester.tap(
+      find.widgetWithText(CheckedPopupMenuItem<FeatureQueryView>, '未签到'),
+    );
     await tester.pumpAndSettle();
     expect(received?.view, FeatureQueryView.signinPending);
   });

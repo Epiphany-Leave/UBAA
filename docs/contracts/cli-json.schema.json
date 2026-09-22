@@ -204,7 +204,8 @@
           ]
         },
         "signinEligibility": { "$ref": "#/$defs/actionEligibility" },
-        "signinTarget": { "$ref": "#/$defs/nullableString" }
+        "signinTarget": { "$ref": "#/$defs/nullableString" },
+        "availabilityMessage": { "$ref": "#/$defs/nullableString" }
       },
       "additionalProperties": false
     },

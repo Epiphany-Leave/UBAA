@@ -10,6 +10,7 @@ class _ProfileView extends StatelessWidget {
     required this.onLogout,
     required this.onLogoutAndClearAccount,
     required this.activeRoutes,
+    this.changingRoute = false,
     this.onReadDiagnostics,
     this.onLoadAppVersion,
     this.onOpenProject,
@@ -23,6 +24,7 @@ class _ProfileView extends StatelessWidget {
   final Future<void> Function() onLogout;
   final Future<void> Function() onLogoutAndClearAccount;
   final List<ConnectionMode> activeRoutes;
+  final bool changingRoute;
   final String Function()? onReadDiagnostics;
   final Future<String?> Function()? onLoadAppVersion;
   final Future<bool> Function()? onOpenProject;
@@ -55,6 +57,7 @@ class _ProfileView extends StatelessWidget {
             onTap: () => _chooseLanguage(context),
           ),
         ),
+        const SizedBox(height: 12),
         Card(
           child: ListTile(
             leading: const Icon(Icons.palette_outlined),
@@ -70,23 +73,44 @@ class _ProfileView extends StatelessWidget {
       Card(
         child: Column(
           children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.tune),
-              title: Text(context.tr('连接模式')),
-              subtitle: Text(context.tr(routePolicy.description)),
-              trailing: DropdownButton<RoutePolicy>(
-                value: routePolicy,
-                onChanged: (value) {
-                  if (value != null) onRoutePolicyChanged(value);
-                },
-                items: RoutePolicy.values
-                    .map(
-                      (item) => DropdownMenuItem<RoutePolicy>(
-                        value: item,
-                        child: Text(context.tr(item.label)),
-                      ),
-                    )
-                    .toList(),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.tune),
+                      const SizedBox(width: 16),
+                      Expanded(child: Text(context.tr('连接模式'))),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    context.tr(
+                      changingRoute ? '正在切换连接，请稍候…' : routePolicy.description,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButton<RoutePolicy>(
+                    isExpanded: true,
+                    value: routePolicy,
+                    onChanged: changingRoute
+                        ? null
+                        : (value) {
+                            if (value != null) onRoutePolicyChanged(value);
+                          },
+                    items: RoutePolicy.values
+                        .map(
+                          (item) => DropdownMenuItem<RoutePolicy>(
+                            value: item,
+                            child: Text(context.tr(item.label)),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  if (changingRoute) const LinearProgressIndicator(),
+                ],
               ),
             ),
             const Divider(height: 1),
@@ -138,6 +162,7 @@ class _ProfileView extends StatelessWidget {
           ),
         ),
       ),
+      const SizedBox(height: 16),
       OutlinedButton.icon(
         onPressed: () => onLogout(),
         icon: const Icon(Icons.logout),

@@ -152,6 +152,11 @@ final 发送后无法确定结果才进入不可重试的 `outcome_unknown`。�
 | `judgeAssignment` | `courseId: String, assignmentId: String` | `JudgeAssignmentDetail` |
 | `judgeAssignmentDetails` | `keys: List<JudgeAssignmentKey>` | `List<JudgeAssignmentDetail>` |
 | `signinToday` | 无 | `List<SigninClass>` |
+| `signinOn` | `date: YYYY-MM-DD` | `List<SigninClass>`，按北京时间检查签到窗口，课表补充项无写入目标 |
+| `signinWeek` | `date: YYYY-MM-DD, refresh: bool` | `List<SigninDay {date,isFuture,classes}>`，按周保存账号快照；每次读取重算未来日期与窗口，写入前仍实时复核 |
+| `cachedGradeOverview` / `cachedExamTerms` / `cachedScheduleTerms` / `cachedSpocAssignments` | `refresh: bool` | 与原 live API 相同 DTO，`route.savedAt` / `route.fromCache` 标识快照时间及来源 |
+| `cachedGrades` / `cachedExamArrangement` | `term: String, refresh: bool` | 同上，缓存键包含学期 |
+| `cachedJudgeAssignments` | `includeExpired: bool, refresh: bool` | 同上，缓存键包含过期项筛选 |
 | `bykcProfile` | 无 | `BykcUserProfile` |
 | `bykcCourses` | `page: i32, size: i32, all: bool` | `BykcCoursePage` |
 | `bykcCourseDetail` | `id: i64` | `BykcCourse` |
@@ -199,7 +204,7 @@ DTO 字段保持与 facade 稳定类型一一对应，但只允许以下字段�
   `JudgeAssignmentKey {courseId,assignmentId}`；详情增加 `problems` 与 `contentPlainText?`；批量详情保持
   去重后的输入顺序，逐项使用同一白名单详情结构。
   `JudgeProblem {name,score?,maxScore?,status,statusText}`。
-- `SigninClass {courseId,courseName,classBeginTime,classEndTime,signStatus?,signinEligibility,signinTarget?}`；
+- `SigninClass {courseId,courseName,classBeginTime,classEndTime,signStatus?,signinEligibility,signinTarget?,availabilityMessage?}`；`availabilityMessage` 为可选的窗口/资格说明，不替代学校签到状态。
   `signStatus=0/1` 分别映射 `allowed/denied`，缺失、畸形或其它值映射 `unknown`。宿主只消费
   typed eligibility/target 决定操作，action 缺失、`unknown`、`denied` 或空目标都必须拒绝。
 - `BykcUserProfile {id,employeeId?,realName?,studentNo?,collegeName?}`；

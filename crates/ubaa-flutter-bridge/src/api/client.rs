@@ -159,8 +159,10 @@ pub enum BridgeNetworkState {
 }
 
 /// 一次 Core 路线决策的安全投影。
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BridgeRouteDecision {
+    pub saved_at: Option<String>,
+    pub from_cache: Option<bool>,
     pub policy: BridgeRoutePolicy,
     pub resolved_route: BridgeConnectionMode,
     pub network: BridgeNetworkState,
@@ -426,21 +428,13 @@ impl BridgeClient {
     ///
     /// # Errors
     ///
-    /// 另一个 bridge 操作占用客户端、客户端已销毁、配置保存失败或重开失败时返回安全错误。
-    #[allow(clippy::unused_async)]
+    /// 等待在途操作释放客户端；客户端已销毁、配置保存失败或重开失败时返回安全错误。
     pub async fn set_default_route_policy(
         &self,
         policy: BridgeRoutePolicy,
     ) -> Result<BridgeRouteSettings, BridgeError> {
         catch_panic(async {
-            let mut guard = self.inner.try_lock().map_err(|_| {
-                BridgeError::local(
-                    BridgeErrorCode::OperationConflict,
-                    BridgeErrorKind::Internal,
-                    true,
-                    "another bridge operation is in progress",
-                )
-            })?;
+            let mut guard = self.inner.lock().await;
             let client = guard.as_mut().ok_or_else(disposed_error)?;
             client
                 .set_default_route_policy(policy.into())
@@ -545,6 +539,8 @@ fn map_profile(profile: UserProfile) -> BridgeUserProfile {
 
 pub(crate) fn map_route(resolution: RouteResolution) -> BridgeRouteDecision {
     BridgeRouteDecision {
+        saved_at: None,
+        from_cache: None,
         policy: resolution.policy.into(),
         resolved_route: resolution.mode.into(),
         network: resolution.diagnostic.network.into(),
@@ -604,6 +600,24 @@ impl From<NetworkState> for BridgeNetworkState {
 #[cfg(test)]
 mod tests {
     use super::{BridgeClient, BridgeError, BridgeErrorCode, catch_panic};
+
+    #[tokio::test]
+    async fn route_change_waits_for_inflight_read() {
+        let path = std::env::temp_dir().join(format!("ubaa-route-wait-{}", std::process::id()));
+        let client = BridgeClient::open(path.to_string_lossy().into_owned()).unwrap();
+        let guard = client.inner.lock().await;
+        let changing = client.set_default_route_policy(super::BridgeRoutePolicy::WebVpn);
+        tokio::pin!(changing);
+        tokio::select! {
+            result = &mut changing => panic!("route change must wait: {result:?}"),
+            () = tokio::task::yield_now() => {}
+        }
+        drop(guard);
+        let settings = changing.await.unwrap();
+        assert_eq!(settings.default_policy, super::BridgeRoutePolicy::WebVpn);
+        client.dispose().await.unwrap();
+        std::fs::remove_dir_all(path).unwrap();
+    }
 
     #[tokio::test]
     async fn panic_is_reduced_to_a_stable_internal_error_without_payload() {

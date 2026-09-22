@@ -16,6 +16,17 @@ pub struct Routed<T> {
     pub resolution: RouteResolution,
 }
 
+/// Optional persistent-read metadata; live-only facade APIs keep their existing contract.
+#[derive(Clone, Debug)]
+pub struct CachedRead<T> {
+    /// Parsed data and the route that originally fetched it.
+    pub result: Routed<T>,
+    /// Time when a persistent read snapshot was obtained.
+    pub saved_at: Option<String>,
+    /// Whether this result came from the private local snapshot.
+    pub from_cache: bool,
+}
+
 /// 调用方显式固定路线的操作结果。
 ///
 /// 该包装器只陈述调用方指定且 Core 实际使用的路线，不表示 Core 重新执行了

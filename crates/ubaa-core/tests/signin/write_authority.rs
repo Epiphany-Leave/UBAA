@@ -14,6 +14,58 @@ const USER_ID: &str = "user-safe";
 const SCHEDULE_ID: &str = "schedule-safe";
 const SESSION_ID: &str = "session-safe";
 
+#[test]
+fn selected_date_is_sent_and_invalid_date_makes_no_request() {
+    let scenario = Scenario::new([today_row(SCHEDULE_ID, "signStatus", "0")]);
+    let root = test_root("selected-date");
+    let store = FileSessionStore::new(&root).unwrap();
+    store
+        .save_dual(&DualSessionSnapshot::new(Some(ready_route(1_001)), None))
+        .unwrap();
+    let mut client = UbaaClient::with_routing(
+        scenario.clone(),
+        Scenario::new(Vec::<String>::new()),
+        store,
+        RouteConfig::parse("[route]\ndefault = \"direct\"\n").unwrap(),
+        NeverProbe,
+    )
+    .unwrap();
+    runtime().block_on(client.signin_on("2026-09-22")).unwrap();
+    assert_eq!(
+        query(
+            &url::Url::parse(&scenario.requests().last().unwrap().url).unwrap(),
+            "dateStr"
+        ),
+        Some("20260922".into())
+    );
+    let count = scenario.requests().len();
+    for invalid in ["2026-02-30", "-262143-01-01", "2026-9-2"] {
+        assert!(runtime().block_on(client.signin_on(invalid)).is_err());
+    }
+    assert_eq!(scenario.requests().len(), count);
+    cleanup(root);
+}
+
+#[test]
+fn too_early_signin_never_fetches_timestamp_or_submits() {
+    let row = today_row(SCHEDULE_ID, "signStatus", "0")
+        .replace("00:00", "2099-09-22 08:00:00")
+        .replace("23:59:59", "2099-09-22 09:35:00");
+    let scenario = Scenario::new([row]);
+    let (mut client, root) = client_for("before-window", scenario.clone());
+    assert!(
+        runtime()
+            .block_on(client.signin_perform(SCHEDULE_ID))
+            .is_err()
+    );
+    assert!(
+        paths(&scenario.requests())
+            .iter()
+            .all(|path| !path.contains("timestamp") && !path.contains("stu_scan_sign"))
+    );
+    cleanup(root);
+}
+
 pub(super) fn allowed_target_is_rechecked_and_submitted_once_with_separated_identifiers() {
     let scenario = Scenario::new([today_row(SCHEDULE_ID, "signStatus", "0")]);
     let (mut client, root) = client_for("allowed", scenario.clone());
@@ -82,6 +134,61 @@ fn denied_unknown_missing_and_malformed_status_never_reach_write_boundary() {
 }
 
 #[test]
+fn weekly_read_fetches_all_seven_days_without_writes() {
+    let root = test_root("whole-week");
+    let store = FileSessionStore::new(&root).unwrap();
+    store
+        .save_dual(&DualSessionSnapshot::new(Some(ready_route(1_001)), None))
+        .unwrap();
+    let scenario = Scenario::new((0..7).map(|_| today_row(SCHEDULE_ID, "signStatus", "0")));
+    let mut client = UbaaClient::with_routing(
+        scenario.clone(),
+        Scenario::new(Vec::<String>::new()),
+        store,
+        RouteConfig::parse("[route]\ndefault = \"direct\"\n").unwrap(),
+        NeverProbe,
+    )
+    .unwrap();
+    let result = runtime()
+        .block_on(client.signin_week("2026-09-23", false))
+        .unwrap();
+    assert_eq!(result.result.data.len(), 7);
+    let dates: Vec<_> = scenario
+        .requests()
+        .iter()
+        .filter_map(|request| query(&url::Url::parse(&request.url).unwrap(), "dateStr"))
+        .collect();
+    assert_eq!(
+        dates,
+        (21..=27)
+            .map(|day| format!("202609{day}"))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(scenario.write_count(), 0);
+    cleanup(root);
+}
+
+#[test]
+fn identical_teacher_rows_submit_one_schedule_once() {
+    let duplicate = format!(
+        r#"{{"STATUS":"0","result":[{},{}]}}"#,
+        row(SCHEDULE_ID, "signStatus", "0"),
+        row(SCHEDULE_ID, "signStatus", "0")
+    );
+    let scenario = Scenario::new([duplicate]);
+    let (mut client, root) = client_for("teachers", scenario.clone());
+    assert!(
+        runtime()
+            .block_on(client.signin_perform(SCHEDULE_ID))
+            .unwrap()
+            .data
+            .success
+    );
+    assert_eq!(scenario.write_count(), 1);
+    cleanup(root);
+}
+
+#[test]
 fn missing_or_duplicate_exact_target_never_reaches_write_boundary() {
     for (name, today) in [
         (
@@ -93,7 +200,7 @@ fn missing_or_duplicate_exact_target_never_reaches_write_boundary() {
             format!(
                 r#"{{"STATUS":"0","result":[{},{}]}}"#,
                 row(SCHEDULE_ID, "signStatus", "0"),
-                row(SCHEDULE_ID, "signStatus", "0"),
+                row(SCHEDULE_ID, "signStatus", "1"),
             ),
         ),
     ] {
@@ -325,7 +432,7 @@ fn assert_signin_result(
 
 fn row(schedule_id: &str, status_key: &str, status_value: &str) -> String {
     format!(
-        r#"{{"id":"{schedule_id}","courseName":"脱敏课程","classBeginTime":"08:00","classEndTime":"09:40","{status_key}":{status_value}}}"#,
+        r#"{{"id":"{schedule_id}","courseName":"脱敏课程","classBeginTime":"00:00","classEndTime":"23:59:59","{status_key}":{status_value}}}"#,
     )
 }
 
@@ -338,7 +445,7 @@ fn today_row(schedule_id: &str, status_key: &str, status_value: &str) -> String 
 
 fn today_without_status(schedule_id: &str) -> String {
     format!(
-        r#"{{"STATUS":"0","result":[{{"id":"{schedule_id}","courseName":"脱敏课程","classBeginTime":"08:00","classEndTime":"09:40"}}]}}"#,
+        r#"{{"STATUS":"0","result":[{{"id":"{schedule_id}","courseName":"脱敏课程","classBeginTime":"00:00","classEndTime":"23:59:59"}}]}}"#,
     )
 }
 

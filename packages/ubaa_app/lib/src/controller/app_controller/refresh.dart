@@ -1,10 +1,24 @@
 part of '../app_controller.dart';
 
 extension _AppControllerRefresh on AppController {
-  Future<void> _refreshHome({Iterable<FeatureId>? only}) async {
-    if (_disposed) return;
+  Future<void> _refreshHome({
+    Iterable<FeatureId>? only,
+    bool refresh = true,
+  }) async {
+    if (_disposed || _changingRoute) return;
     final lifecycleEpoch = _lifecycleEpoch;
-    final features = (only ?? FeatureId.values).toList(growable: false);
+    final features =
+        (only ??
+                (refresh
+                    ? FeatureId.values
+                    : const [
+                        FeatureId.schedule,
+                        FeatureId.exam,
+                        FeatureId.grades,
+                        FeatureId.spoc,
+                        FeatureId.judge,
+                      ]))
+            .toList(growable: false);
     final generations = <FeatureId, int>{
       for (final feature in features) feature: _nextFeatureGeneration(feature),
     };
@@ -24,6 +38,17 @@ extension _AppControllerRefresh on AppController {
           feature,
           generations[feature]!,
           lifecycleEpoch,
+          query:
+              _backend is FeatureQueryBackend &&
+                  const {
+                    FeatureId.grades,
+                    FeatureId.exam,
+                    FeatureId.spoc,
+                    FeatureId.judge,
+                    FeatureId.signin,
+                  }.contains(feature)
+              ? FeatureQuery(refresh: refresh)
+              : null,
           ygdkGeneration: feature == FeatureId.ygdk ? ygdkGeneration : null,
         ),
       ),
@@ -37,7 +62,7 @@ extension _AppControllerRefresh on AppController {
     FeatureId feature,
     FeatureQuery query,
   ) async {
-    if (_disposed) return;
+    if (_disposed || _changingRoute) return;
     if (_backend is! FeatureQueryBackend) {
       _snapshots[feature] = _snapshots[feature]!.copyWith(
         status: FeatureLoadStatus.failure,
@@ -87,10 +112,7 @@ extension _AppControllerRefresh on AppController {
     }
     final started = DateTime.now();
     final previous = _snapshots[feature]!;
-    final hadPreviousData =
-        previous.updatedAt != null &&
-        (previous.details.isNotEmpty ||
-            previous.summary?.trim().isNotEmpty == true);
+    final hadPreviousData = previous.updatedAt != null;
     try {
       final result = switch ((_backend, query)) {
         (FeatureQueryBackend queryBackend, final FeatureQuery value) =>
@@ -145,7 +167,6 @@ extension _AppControllerRefresh on AppController {
             ? FeatureLoadStatus.stale
             : FeatureLoadStatus.failure,
         error: uiError,
-        updatedAt: DateTime.now(),
       );
       await _recordFeature(
         feature,
@@ -227,6 +248,7 @@ extension _AppControllerRefresh on AppController {
       details: result.details,
       scheduleNavigation: result.scheduleNavigation,
       timetable: result.timetable,
+      signinDays: result.signinDays,
       clearTimetable: result.timetable == null,
       error: result.error == null
           ? null
@@ -237,7 +259,7 @@ extension _AppControllerRefresh on AppController {
             ),
       resolvedRoute: result.resolvedRoute,
       pagination: result.pagination,
-      updatedAt: DateTime.now(),
+      updatedAt: result.savedAt ?? DateTime.now(),
       clearError: result.error == null,
       clearSummary: result.summary == null,
       clearDetails: result.details.isEmpty,

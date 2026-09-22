@@ -4,7 +4,7 @@ import 'package:ubaa_domain/ubaa_domain.dart';
 import 'package:ubaa_ui/ubaa_ui.dart';
 
 void main() {
-  testWidgets('首页提醒保存失败不生效，重新进入保留开关并可前往打卡', (tester) async {
+  testWidgets('提醒开关仅在阳光子页，保存成功后首页显示提醒', (tester) async {
     var saved = false, fail = true;
     Widget app() => MaterialApp(
       home: UbaaMainShell(
@@ -31,6 +31,12 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(find.text('前往阳光打卡'), findsNothing);
+    expect(find.byType(Switch), findsNothing);
+    await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阳光打卡'));
+    await tester.pumpAndSettle();
+    expect(find.text('阳光打卡首页提醒'), findsOneWidget);
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(find.text('提醒设置保存失败，请重试'), findsOneWidget);
@@ -39,12 +45,15 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(saved, isTrue);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(app());
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+    expect(find.byType(Switch), findsNothing);
     expect(find.text('前往阳光打卡'), findsOneWidget);
     await tester.tap(find.text('前往阳光打卡'));
     await tester.pumpAndSettle();
     expect(find.text('阳光打卡'), findsOneWidget);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
   });
 }

@@ -206,6 +206,16 @@ void main() {
     expect(find.text('美育'), findsOneWidget);
     expect(find.text('达标'), findsWidgets);
     expect(find.text('未达标'), findsOneWidget);
+    final firstCard = find
+        .ancestor(of: find.text('德育'), matching: find.byType(Card))
+        .first;
+    final nextCard = find
+        .ancestor(of: find.text('美育'), matching: find.byType(Card))
+        .first;
+    expect(
+      tester.getTopLeft(nextCard).dy - tester.getBottomLeft(firstCard).dy,
+      greaterThanOrEqualTo(8),
+    );
     expect(tester.takeException(), isNull);
   });
 }

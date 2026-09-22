@@ -94,14 +94,24 @@ void _registerWriteCoordinationTests() {
     final shell = tester.widget<UbaaMainShell>(find.byType(UbaaMainShell));
     await tester.tap(find.text('阳光打卡'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('准备阳光打卡'));
+    await tester.tap(find.text('去打卡'));
     await tester.pumpAndSettle();
     final fields = find.descendant(
-      of: find.byType(AlertDialog),
+      of: find.byType(Dialog),
       matching: find.byType(TextField),
     );
     await tester.enterText(fields.at(0), '2026-09-05 08:00');
     await tester.enterText(fields.at(1), '2026-09-05 09:00');
+    await tester.scrollUntilVisible(
+      find.text('选择照片'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(Dialog),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.text('选择照片'));
     await tester.pump();
     expect(picker.started, isTrue);

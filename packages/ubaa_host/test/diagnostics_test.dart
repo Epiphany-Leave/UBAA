@@ -19,6 +19,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.person_outline));
     await tester.pumpAndSettle();
     expect(find.text('本次运行诊断'), findsOneWidget);
+    await tester.ensureVisible(find.text('本次运行诊断'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('本次运行诊断'));
     await tester.pumpAndSettle();
     final report = tester

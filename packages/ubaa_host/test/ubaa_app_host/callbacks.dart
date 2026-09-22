@@ -82,13 +82,25 @@ void _registerCallbackTests() {
     expect(shell.initialTab, 2);
     backend.resetReadCalls();
     await shell.onRefresh();
-    expect(backend.loadedFeatures, FeatureId.values);
-    expect(backend.queryCalls, isEmpty);
+    const cached = {
+      FeatureId.exam,
+      FeatureId.grades,
+      FeatureId.spoc,
+      FeatureId.judge,
+      FeatureId.signin,
+    };
+    expect(
+      backend.loadedFeatures,
+      FeatureId.values.where((f) => !cached.contains(f)).toList(),
+    );
+    expect(backend.queryCalls.map((call) => call.feature).toSet(), cached);
+    expect(backend.queryCalls.every((call) => call.query.refresh), isTrue);
 
     backend.resetReadCalls();
     await shell.onRetryFeature(FeatureId.judge);
-    expect(backend.loadedFeatures, <FeatureId>[FeatureId.judge]);
-    expect(backend.queryCalls, isEmpty);
+    expect(backend.loadedFeatures, isEmpty);
+    expect(backend.queryCalls.single.feature, FeatureId.judge);
+    expect(backend.queryCalls.single.query.refresh, isTrue);
 
     const query = FeatureQuery(view: FeatureQueryView.scheduleWeek, week: 3);
     backend.resetReadCalls();
@@ -346,8 +358,14 @@ void _registerCallbackTests() {
     for (final route in featureRoutes.entries) {
       backend.resetReadCalls();
       await shell.onWriteSuccess!(route.key, null);
-      expect(backend.loadedFeatures, <FeatureId>[route.value]);
-      expect(backend.queryCalls, isEmpty);
+      if (route.value == FeatureId.signin) {
+        expect(backend.loadedFeatures, isEmpty);
+        expect(backend.queryCalls.single.feature, FeatureId.signin);
+        expect(backend.queryCalls.single.query.refresh, isTrue);
+      } else {
+        expect(backend.loadedFeatures, <FeatureId>[route.value]);
+        expect(backend.queryCalls, isEmpty);
+      }
     }
     backend.resetReadCalls();
     await shell.onWriteSuccess!(WriteOperation.ygdkSubmit, null);

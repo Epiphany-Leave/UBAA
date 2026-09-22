@@ -10,7 +10,9 @@ Future<FeatureResult> _loadAssignmentFeature(
     case FeatureId.spoc:
       switch (query.view) {
         case FeatureQueryView.summary:
-          final result = await client.spocAssignments();
+          final result = await client.cachedSpocAssignments(
+            refresh: query.refresh,
+          );
           final details = result.data.assignments
               .map(
                 (item) => FeatureDetail(
@@ -33,6 +35,7 @@ Future<FeatureResult> _loadAssignmentFeature(
             '项 SPOC 作业',
             details: details,
             resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
+            savedAt: result.route.savedAt,
           );
         case FeatureQueryView.spocDetail:
           final assignmentId = _requiredQueryValue(query.assignmentId, '作业编号');
@@ -67,7 +70,8 @@ Future<FeatureResult> _loadAssignmentFeature(
     case FeatureId.judge:
       switch (query.view) {
         case FeatureQueryView.summary:
-          final result = await client.judgeAssignments(
+          final result = await client.cachedJudgeAssignments(
+            refresh: query.refresh,
             includeExpired: query.includeExpired,
           );
           final details = result.data
@@ -94,6 +98,7 @@ Future<FeatureResult> _loadAssignmentFeature(
             result.data.length,
             '项希冀作业',
             details: details,
+            savedAt: result.route.savedAt,
             resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
           );
         case FeatureQueryView.judgeDetail:
@@ -192,22 +197,42 @@ Future<FeatureResult> _loadAssignmentFeature(
           throw const BackendException(UbaaErrorCode.invalidInput);
       }
     case FeatureId.signin:
-      final result = await client.signinToday();
+      final day =
+          query.date ?? DateTime.now().toUtc().add(const Duration(hours: 8));
+      final result = await client.signinWeek(
+        date: _dateOnly(day),
+        refresh: query.refresh,
+      );
+      final selected = result.data.singleWhere(
+        (value) => value.date == _dateOnly(day),
+      );
+      final overview = result.data
+          .map(
+            (value) => SigninDaySummary(
+              date: DateTime.parse(value.date),
+              courses: value.classes
+                  .map(
+                    (item) => value.isFuture
+                        ? SigninDisplayStatus.unknown
+                        : switch (item.signStatus) {
+                            0 => SigninDisplayStatus.pending,
+                            1 => SigninDisplayStatus.signed,
+                            _ => SigninDisplayStatus.unknown,
+                          },
+                  )
+                  .toList(growable: false),
+            ),
+          )
+          .toList(growable: false);
       final classes = switch (query.view) {
-        FeatureQueryView.summary => result.data,
+        FeatureQueryView.summary => selected.classes,
         FeatureQueryView.signinPending =>
-          result.data
-              .where(
-                (item) =>
-                    item.signinEligibility == BridgeActionEligibility.allowed,
-              )
+          selected.classes
+              .where((item) => item.signStatus == 0 && !selected.isFuture)
               .toList(growable: false),
         FeatureQueryView.signinCompleted =>
-          result.data
-              .where(
-                (item) =>
-                    item.signinEligibility == BridgeActionEligibility.denied,
-              )
+          selected.classes
+              .where((item) => item.signStatus == 1)
               .toList(growable: false),
         _ => throw const BackendException(UbaaErrorCode.invalidInput),
       };
@@ -224,12 +249,16 @@ Future<FeatureResult> _loadAssignmentFeature(
                 FeatureField(label: '课程 ID', value: item.courseId),
                 FeatureField(
                   label: '签到状态',
-                  value: switch (eligibility) {
-                    ActionEligibility.allowed => '未签到',
-                    ActionEligibility.denied => '已签到',
-                    ActionEligibility.unknown => '状态未知',
-                  },
+                  value: selected.isFuture
+                      ? '未到日期'
+                      : switch (item.signStatus) {
+                          0 => '未签到',
+                          1 => '已签到',
+                          _ => '状态未知',
+                        },
                 ),
+                if (item.availabilityMessage != null)
+                  FeatureField(label: '说明', value: item.availabilityMessage!),
               ],
               actions: target == null || target.isEmpty
                   ? const <FeatureAction>[]
@@ -242,13 +271,22 @@ Future<FeatureResult> _loadAssignmentFeature(
             );
           })
           .toList(growable: false);
-      return _countResult(
-        classes.length,
-        switch (query.view) {
-          FeatureQueryView.signinPending => '门未签到课程',
-          FeatureQueryView.signinCompleted => '门已签到课程',
-          _ => '门今日签到课程',
-        },
+      if (classes.isEmpty) {
+        return FeatureResult.empty(
+          signinDays: overview,
+          savedAt: DateTime.tryParse(result.route.savedAt ?? ''),
+          resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
+        );
+      }
+      final label = switch (query.view) {
+        FeatureQueryView.signinPending => '门未签到课程',
+        FeatureQueryView.signinCompleted => '门已签到课程',
+        _ => '门当日课程',
+      };
+      return FeatureResult.success(
+        summary: '${classes.length}$label',
+        signinDays: overview,
+        savedAt: DateTime.tryParse(result.route.savedAt ?? ''),
         details: details,
         resolvedRoute: _toConnectionMode(result.route.resolvedRoute),
       );

@@ -56,6 +56,7 @@ void main() {
 
   testWidgets('确认页完全消费宿主写状态并将确认命令交回宿主', (tester) async {
     var confirmations = 0;
+    var cancellations = 0;
     final intent = WriteIntent(
       intentId: 'host-owned-intent',
       operation: WriteOperation.bykcSelectCourse,
@@ -81,7 +82,9 @@ void main() {
           confirmations++;
           return null;
         },
-        onCancelWrite: () async {},
+        onCancelWrite: () async {
+          cancellations++;
+        },
         onRefresh: () async {},
         onRetryFeature: (_) async {},
         onLogout: () async {},
@@ -95,6 +98,10 @@ void main() {
       shell(WriteState(phase: WritePhase.ready, intent: intent)),
     );
     expect(find.text('由宿主保存的确认目标'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(cancellations, 1);
+    expect(confirmations, 0);
     await tester.tap(find.text('确认提交'));
     await tester.pumpAndSettle();
     expect(confirmations, 1);
@@ -104,6 +111,9 @@ void main() {
       shell(WriteState(phase: WritePhase.committing, intent: intent)),
     );
     await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(cancellations, 1);
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,

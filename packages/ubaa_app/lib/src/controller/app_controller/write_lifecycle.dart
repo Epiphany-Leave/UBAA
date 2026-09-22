@@ -23,6 +23,21 @@ extension _AppControllerWriteLifecycle on AppController {
     _writeTransitions++;
     _lifecycleEpoch++;
     _ygdkGeneration++;
+    // Invalidated reads cannot publish a result, so settle their spinners now.
+    for (final entry in _snapshots.entries.toList()) {
+      if (entry.value.status != FeatureLoadStatus.loading) continue;
+      _snapshots[entry.key] = entry.value.copyWith(
+        status: entry.value.updatedAt == null
+            ? FeatureLoadStatus.failure
+            : FeatureLoadStatus.stale,
+        error: const UiError(
+          code: UbaaErrorCode.operationConflict,
+          title: '查询已中断',
+          message: '连接或账号状态已变化，请重试。',
+          retryable: true,
+        ),
+      );
+    }
     _writeCoordinator.invalidate();
   }
 
